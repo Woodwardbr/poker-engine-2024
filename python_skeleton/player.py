@@ -6,7 +6,7 @@ import random
 import pickle
 import itertools
 from typing import Optional
-
+from handCombinations import generate_and_categorize_hands
 from skeleton.actions import Action, CallAction, CheckAction, FoldAction, RaiseAction
 from skeleton.states import GameState, TerminalState, RoundState
 from skeleton.states import NUM_ROUNDS, STARTING_STACK, BIG_BLIND, SMALL_BLIND
@@ -76,7 +76,7 @@ class Player(Bot):
 
         return self.log
 
-    def estimate_opponent_equity(self, my_cards, board_cards):
+    def estimate_opponent_equity(self, my_cards, board_cards, end):
         """
         Estimate the opponent hand probabilities based on the cards on the board and your own cards.
         """
@@ -97,7 +97,8 @@ class Player(Bot):
         # Remove cards that are already in your hand
         for card in my_cards:
             possible_opponent_hands = [hand for hand in possible_opponent_hands if card not in hand]
-
+        if end:
+            return possible_opponent_hands
         # Calculate the probability of each possible opponent hand
         opponent_hand_probs = {}
         for hand in possible_opponent_hands:
@@ -155,25 +156,45 @@ class Player(Bot):
         #my_equity = self.pre_computed_probs['_'.join(sorted(observation["my_cards"])) + '_' + '_'.join(sorted(observation["board_cards"]))]
 
         # Estimate opponent hand probabilities
-        opponent_equity = self.estimate_opponent_equity(observation["my_cards"], observation["board_cards"])
-        # Sum up probabilities of opponent having a better hand
-        sum_better_hands = sum([self.hand_rank(observation, hand) for hand, prob in opponent_equity.items()])/17550
-        # Make decision based on the sum of probabilities
-        if sum_better_hands > 0.5:
-            return FoldAction()
-        #sum_better_hands in between 0.4 and 0.5
-        elif sum_better_hands > 0.4 and sum_better_hands <= 0.5:
-            return RaiseAction(observation["min_raise"])
-        elif sum_better_hands > 0.3 and sum_better_hands <= 0.4:
-            amt = random.randint(observation["min_raise"], observation["max_raise"])
-            return RaiseAction(amt)
-        elif sum_better_hands <= 0.05:
-            return RaiseAction(observation["max_raise"])
-        
-        if CallAction in observation["legal_actions"]:
-            return CallAction()
+        street = observation["street"]
+        if street < 2:
+            opponent_equity = self.estimate_opponent_equity(observation["my_cards"], observation["board_cards"], False)
+            # Sum up probabilities of opponent having a better hand
+            sum_better_hands = sum([self.hand_rank(observation, hand) for hand, prob in opponent_equity.items()])/17550
+            # Make decision based on the sum of probabilities
+            if sum_better_hands > 0.5:
+                return FoldAction()
+            #sum_better_hands in between 0.4 and 0.5
+            elif sum_better_hands > 0.4 and sum_better_hands <= 0.5:
+                return RaiseAction(observation["min_raise"])
+            elif sum_better_hands > 0.3 and sum_better_hands <= 0.4:
+                amt = random.randint(observation["min_raise"], observation["max_raise"])
+                return RaiseAction(amt)
+            elif sum_better_hands <= 0.05:
+                return RaiseAction(observation["max_raise"])
+            
+            if CallAction in observation["legal_actions"]:
+                return CallAction()
+            else:
+                return CheckAction()
         else:
-            return CheckAction()
+            my_hand = generate_and_categorize_hands(observation["my_cards"], observation["board_cards"])
+            opp_hands = self.estimate_opponent_equity(observation["my_cards"], observation["board_cards"], True)
+            results = [generate_and_categorize_hands(hand, observation["board_cards"]) for hand in opp_hands]
+            win_prob = sum([my_hand < hand for hand in results])/len(results)
+            if win_prob > 0.8:
+                return RaiseAction(observation["max_raise"])
+            elif win_prob > 0.5 and win_prob <= 0.8:
+                amt = random.randint(observation["min_raise"], observation["max_raise"])
+                return RaiseAction(amt)
+            elif win_prob > 0.2 and win_prob <= 0.5:
+                return RaiseAction(observation["min_raise"])
+            else:
+                if CheckAction in observation["legal_actions"]:
+                    return CheckAction()
+                else:
+                    return FoldAction()
+
 
 
 if __name__ == '__main__':

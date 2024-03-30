@@ -76,35 +76,6 @@ class Player(Bot):
 
         return self.log
 
-    def estimate_opponent_equity(self, my_cards, board_cards):
-        """
-        Estimate the opponent hand probabilities based on the cards on the board and your own cards.
-        """
-        # Generate all possible opponent hands
-        possible_opponent_hands = []
-        for card in board_cards:
-            possible_opponent_hands.append([card + 'h', card + 'd'])
-            possible_opponent_hands.append([card + 'h', card + 's'])
-            possible_opponent_hands.append([card + 'd', card + 's'])
-
-        # Remove duplicates
-        possible_opponent_hands = list(set([tuple(sorted(hand)) for hand in possible_opponent_hands]))
-
-        # Remove cards that are already on the board
-        for card in board_cards:
-            possible_opponent_hands = [hand for hand in possible_opponent_hands if card not in hand]
-
-        # Remove cards that are already in your hand
-        for card in my_cards:
-            possible_opponent_hands = [hand for hand in possible_opponent_hands if card not in hand]
-
-        # Calculate the probability of each possible opponent hand
-        opponent_hand_probs = {}
-        for hand in possible_opponent_hands:
-            opponent_hand_probs['_'.join(hand)] = self.pre_computed_probs['_'.join(hand) + '_' + '_'.join(sorted(board_cards))]
-
-        return opponent_hand_probs
-
     #this code just returns if their hand has more equity than mine
     def hand_rank(self, observation, opp_hand):
         my_equity = self.pre_computed_probs['_'.join(sorted(observation["my_cards"])) + '_' + '_'.join(sorted(observation["board_cards"]))]
@@ -154,25 +125,33 @@ class Player(Bot):
  
         #my_equity = self.pre_computed_probs['_'.join(sorted(observation["my_cards"])) + '_' + '_'.join(sorted(observation["board_cards"]))]
 
-        # Estimate opponent hand probabilities
-        opponent_equity = self.estimate_opponent_equity(observation["my_cards"], observation["board_cards"])
-        # Sum up probabilities of opponent having a better hand
-        sum_better_hands = sum([self.hand_rank(observation, hand) for hand, prob in opponent_equity.items()])/17550
-        # Make decision based on the sum of probabilities
-        if sum_better_hands > 0.5:
-            return FoldAction()
-        elif sum_better_hands < 0.4:
-            return RaiseAction(observation["min_raise"])
-        elif sum_better_hands < 0.3:
-            amt = max(observation["min_raise"], observation["max_raise"]//2)
-            return RaiseAction(amt)
-        elif sum_better_hands < 0.05:
-            return RaiseAction(observation["max_raise"])
-        
-        if CheckAction in observation["legal_actions"]:
-            return CheckAction()
-        else:
-            return CallAction()
+        ###replace this code: this is just a rule based agent that plays any pair, same suited hand, or hands with straight potential
+
+        first_card = observation["my_cards"][0][0]
+        second_card = observation["my_cards"][1][0]
+        if first_card == second_card:
+            if RaiseAction in observation["legal_actions"]:
+                return RaiseAction(observation["min_raise"])
+            elif CallAction in observation["legal_actions"]:
+                return CallAction()
+            else:
+                return CheckAction()
+
+        if observation["my_cards"][0][1] == observation["my_cards"][1][1]:
+            if RaiseAction in observation["legal_actions"]:
+                return RaiseAction(observation["min_raise"])
+            elif CallAction in observation["legal_actions"]:
+                return CallAction()
+            else:
+                return CheckAction()
+
+        if abs(int(first_card) - int(second_card)) <= 3:
+            if CallAction in observation["legal_actions"]:
+                return CallAction()
+            else:
+                return CheckAction()
+
+        return FoldAction()
 
 
 if __name__ == '__main__':

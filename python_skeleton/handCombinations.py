@@ -15,31 +15,31 @@ def categorize_hand_combination(combo: list[str]) -> str:
 
     # Check for a straight flush
     if ranks == list(range(ranks[0], ranks[0] + 3)) and len(set(suits)) == 1:
-        return "Straight Flush"
+        return 1
     
     # Check for trips
     elif ranks[0] == ranks[1] == ranks[2]:
-        return "Trips"
+        return 2
     
     # Check for a straight
     elif ranks == list(range(ranks[0], ranks[0] + 3)):
-        return "Straight"
+        return 3
     
     # Check for flush
     elif len(set(suits)) == 1:
-        return "Flush"
+        return 4
     
     # Check for a pair
     elif len(set(ranks)) == 2:
-        return "Pair"
+        return 5
     
     # Otherwise, it's a high card
     else:
-        return "High Card"
+        return 6
 
 # Function to generate and categorize each combination
 def generate_and_categorize_hands(my_cards: list[str], board_cards: list[str]) -> list[str]:
     hands = generate_hand_combinations(my_cards, board_cards)
     categorized_hands = [categorize_hand_combination(list(combo)) for combo in hands]
-    return categorized_hands
+    return min(categorized_hands)
 
