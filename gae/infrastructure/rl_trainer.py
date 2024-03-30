@@ -73,34 +73,12 @@ class RL_Trainer(object):
         # Observation and action sizes
         
         # Two player has obs as a tuple
-        ob_dim = 0
-        if len(self.env.observation_space) == 2:
-            obs_space_dict = self.env.observation_space[0]
-        else:
-            obs_space_dict = self.env.observation_space
-        for ob in obs_space_dict.values():
-            if isinstance(ob, gym.spaces.Box):
-                ob_dim += ob.shape[0]
-            elif isinstance(ob, gym.spaces.MultiBinary):
-                ob_dim += len(ob.n)
-            elif isinstance(ob, gym.spaces.Discrete):
-                ob_dim += 1
-
-        ob_dim = self.env.observation_space.shape[0]
-        ac_dim = self.env.action_space.n if discrete else self.env.action_space.shape[0]
+        ob_dim = 20
+        ac_dim = 2
         self.params['agent_params']['ac_dim'] = ac_dim
         self.params['agent_params']['ob_dim'] = ob_dim
 
-        # simulation timestep, will be used for video saving
-        if 'model' in dir(self.env):
-            self.fps = 1/self.env.model.opt.timestep
-        elif 'env_wrappers' in self.params:
-            self.fps = 30 # This is not actually used when using the Monitor wrapper
-        elif 'video.frames_per_second' in self.env.env.metadata.keys():
-            self.fps = self.env.env.metadata['video.frames_per_second']
-        else:
-            self.fps = 10
-
+        self.fps = -1
 
         #############
         ## AGENT

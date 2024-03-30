@@ -62,27 +62,27 @@ def sample_trajectory(env, policy, max_path_length, render=False, render_mode=('
     obses, acts, rews, nobses, terms, imgs = [], [], [], [], [], []
     steps = 0
     while True:
-        if render:
-            if 'rgb_array' in render_mode:
-                if hasattr(env.unwrapped, sim):
-                    if 'track' in env.unwrapped.model.camera_names:
-                        imgs.append(env.unwrapped.sim.render(camera_name='track', height=500, width=500)[::-1])
-                    else:
-                        imgs.append(env.unwrapped.sim.render(height=500, width=500)[::-1])
 
-            if 'human' in render_mode:
-                env.render(mode=render_mode)
-                time.sleep(env.model.opt.timestep)
+        obs = obs[0]
 
-        obses.append(obs)
-        act = policy.get_action(obs)
-        act = act[0]
-        acts.append(act)
-        nobs, rew, done, _ = env.step(act)
-        nobses.append(nobs)
-        rews.append(rew)
-        obs = nobs.copy()
-        steps += 1
+        for i in range(len(obs)):
+            obs_player = obs[i]
+            obs_arr = []
+            for o in obs[1].values():
+                if isinstance(o, int):
+                    obs_arr.append(o)
+                elif isinstance(o, np.ndarray):
+                    obs_arr.extend(o.tolist())
+            obs_arr = np.array(obs_arr)
+            obses.append(obs_arr)
+            act = policy.get_action(obs_arr)
+            act = act[0]
+            acts.append(act)
+            nobs, rew, done, _ = env.step(act)
+            nobses.append(nobs)
+            rews.append(rew)
+            obs = nobs.copy()
+            steps += 1
 
         if done or steps > max_path_length:
             terms.append(1)
