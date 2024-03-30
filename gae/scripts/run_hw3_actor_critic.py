@@ -1,8 +1,8 @@
 import os
 import time
 
-from rob831.agents.ac_agent import ACAgent
-from rob831.infrastructure.rl_trainer import RL_Trainer
+from gae.agents.ac_agent import ACAgent
+from gae.infrastructure.rl_trainer import RL_Trainer
 
 
 class AC_Trainer(object):

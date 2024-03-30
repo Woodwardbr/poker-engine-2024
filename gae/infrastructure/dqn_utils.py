@@ -3,14 +3,13 @@ implementing DQN."""
 import random
 from collections import namedtuple
 
-import gym
+import gymnasium as gym
 import numpy as np
 from torch import nn
 import tensorflow as tf
 import torch.optim as optim
 
-from rob831.infrastructure.atari_wrappers import wrap_deepmind
-from gym.envs.registration import register
+from gae.infrastructure.atari_wrappers import wrap_deepmind
 
 import torch
 
@@ -25,16 +24,6 @@ OptimizerSpec = namedtuple(
     ["constructor", "optim_kwargs", "learning_rate_schedule"],
 )
 
-
-def register_custom_envs():
-    # from gym.envs.registration import registry
-    # if 'LunarLander-v3' not in registry.env_specs:
-    register(
-        id='LunarLander-v3',
-        entry_point='rob831.envs.box2d.lunar_lander:LunarLander',
-        max_episode_steps=1000,
-        reward_threshold=200,
-    )
 
 
 def get_env_kwargs(env_name):

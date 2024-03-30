@@ -1,12 +1,12 @@
 from collections import OrderedDict
 
-from rob831.critics.bootstrapped_continuous_critic import \
+from gae.critics.bootstrapped_continuous_critic import \
     BootstrappedContinuousCritic
-from rob831.infrastructure.replay_buffer import ReplayBuffer
-from rob831.infrastructure.utils import *
-from rob831.policies.MLP_policy import MLPPolicyAC
+from gae.infrastructure.replay_buffer import ReplayBuffer
+from gae.infrastructure.utils import *
+from gae.policies.MLP_policy import MLPPolicyAC
 from .base_agent import BaseAgent
-import rob831.infrastructure.pytorch_util as ptu
+import gae.infrastructure.pytorch_util as ptu
 import torch
 
 

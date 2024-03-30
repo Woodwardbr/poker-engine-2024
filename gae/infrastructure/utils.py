@@ -1,6 +1,8 @@
 import numpy as np
 import time
 import copy
+from gymnasium import register
+
 
 ############################################
 ############################################
@@ -174,3 +176,9 @@ def add_noise(data_inp, noiseToSignal=0.01):
             0, np.absolute(std_of_noise[j]), (data.shape[0],)))
 
     return data
+
+def register_custom_env():
+    register(
+        id='PokerEnv',
+        entry_point='engine.gym_env:PokerEnv'
+    )

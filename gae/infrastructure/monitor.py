@@ -1,4 +1,4 @@
-import gym
+import gymnasium as gym
 from gym import Wrapper
 from gym import error, version, logger
 import os, json, numpy as np, six

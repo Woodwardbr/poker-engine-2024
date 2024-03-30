@@ -8,8 +8,8 @@ import numpy as np
 import torch
 from torch import distributions
 
-from rob831.infrastructure import pytorch_util as ptu
-from rob831.policies.base_policy import BasePolicy
+from gae.infrastructure import pytorch_util as ptu
+from gae.policies.base_policy import BasePolicy
 
 
 class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
