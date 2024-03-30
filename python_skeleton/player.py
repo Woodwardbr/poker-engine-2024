@@ -92,7 +92,9 @@ class Player(Bot):
         board_cards = observation["board_cards"]
         prior = {}
         combo = observation["street"] + 2
-        for hand in itertools.combinations(my_cards + board_cards, combo):
+        deck = [str(i) + suit for i in range(1, 10) for suit in ['s', 'h', 'd']]
+        future_cards = [card for card in deck if card not in my_cards + board_cards]
+        for hand in itertools.combinations(my_cards + board_cards + future_cards, combo):
             hand_str = "_".join(sorted(hand))
             prior[hand_str] = evaluate(my_cards, board_cards)
         return prior
@@ -115,7 +117,8 @@ class Player(Bot):
         enemy_cards = [card for card in deck if card not in my_cards + board_cards]
         for hand in itertools.combinations(enemy_cards + board_cards, combo):
             hand_str = "_".join(sorted(hand))
-            prior[hand_str] = evaluate(my_cards, board_cards)
+            enemy = [card for card in hand if card not in board_cards]
+            prior[hand_str] = evaluate(enemy, board_cards)
         return prior
     
     def mcmc_simulation(self, prior, num_samples):
@@ -197,10 +200,35 @@ class Player(Bot):
 
         #this gives us a simulated posterior distribution of the opponent's equity
         posterior_enemy = self.mcmc_simulation(prior_enemy, num_samples)
-
-        #pull random value from posteriors
-        my_equity = random.choice(list(posterior_us.values()))
-        opp_equity = random.choice(list(posterior_enemy.values()))
+        
+        #prior update step based on first action
+        #if this is true we have second action and need to update prior
+        #based on opponent bet
+        if CallAction in observation["legal_actions"]:
+            opp_bet = observation["opp_pip"]
+            if opp_bet == 400:
+                epsilon = np.random.uniform(0, 1)
+                if epsilon < 0.05:
+                    return CallAction()
+            if opp_bet > 200:
+                my_equity = random.choice(list(posterior_us.values())[:len(posterior_us)//2])
+                opp_equity = random.choice(list(posterior_enemy.values())[len(posterior_enemy)//2:])
+            else:
+                my_equity = random.choice(list(posterior_us.values())[len(posterior_us)//2:])
+                opp_equity = random.choice(list(posterior_enemy.values())[:len(posterior_enemy)//2])
+        
+        #else pull random value from posteriors if we are first action
+        else:
+            opp_stack = observation["opp_stack"]
+            if opp_stack == 400:
+                my_equity = random.choice(list(posterior_us.values()))
+                opp_equity = random.choice(list(posterior_enemy.values()))
+            elif opp_stack > 200:
+                my_equity = random.choice(list(posterior_us.values())[len(posterior_us)//2:])
+                opp_equity = random.choice(list(posterior_enemy.values())[:len(posterior_enemy)//2])
+            else:
+                my_equity = random.choice(list(posterior_us.values())[:len(posterior_us)//2])
+                opp_equity = random.choice(list(posterior_enemy.values())[len(posterior_enemy)//2:])
 
         #introduce irrationality in our agent
         epsilon = np.random.uniform(0, 1)
@@ -210,13 +238,21 @@ class Player(Bot):
                 return RaiseAction(amt)
             else:
                 return FoldAction()
-            
+        
+        self.log.append(f"Our equity: {my_equity}")
+        self.log.append(f"Opponent equity: {opp_equity}")
         #otherwise, compare equities and proceed.
         if my_equity >= opp_equity:
-            if RaiseAction in observation["legal_actions"]:
-                amt = random.randint(observation["min_raise"], observation["max_raise"])
-                return RaiseAction(amt)
-            elif CallAction in observation["legal_actions"]:
+            equity_diff = ((my_equity - opp_equity)/opp_equity) * 100
+            if equity_diff > 20:
+                if RaiseAction in observation["legal_actions"]:
+                    stack_bet = int(0.5 * (observation["my_stack"] + observation["opp_stack"]))
+                    amt = max(observation["min_raise"], stack_bet)
+                    return RaiseAction(amt)
+                else:
+                    return CallAction()
+            
+            if CallAction in observation["legal_actions"]:
                 return CallAction()
             else:
                 return CheckAction()

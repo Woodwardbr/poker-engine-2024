@@ -31,7 +31,7 @@ class Player(Bot):
         Nothing.
         """
         self.log = []
-        self.pre_computed_probs = pickle.load(open("python_skeleton/skeleton/pre_computed_probs.pkl", "rb"))
+        #self.pre_computed_probs = pickle.load(open("python_skeleton/skeleton/pre_computed_probs.pkl", "rb"))
         pass
 
     def handle_new_round(self, game_state: GameState, round_state: RoundState, active: int) -> None:
@@ -78,13 +78,7 @@ class Player(Bot):
 
         return self.log
 
-    #this code just returns if their hand has more equity than mine
-    def hand_rank(self, observation, opp_hand):
-        my_equity = self.pre_computed_probs['_'.join(sorted(observation["my_cards"])) + '_' + '_'.join(sorted(observation["board_cards"]))]
-        opp_equity = self.pre_computed_probs['_'.join(sorted(opp_hand)) + '_' + '_'.join(sorted(observation["board_cards"]))]
-        return opp_equity - my_equity
-
-    def generate_prior(self, observation: dict):
+    def generate_prior_ours(self, observation):
         """
         Generate a prior from the pre_computed_probs pickle file.
 
@@ -97,13 +91,37 @@ class Player(Bot):
         my_cards = observation["my_cards"]
         board_cards = observation["board_cards"]
         prior = {}
-        for hand in itertools.combinations(my_cards + board_cards, 2):
+        combo = observation["street"] + 2
+        deck = [str(i) + suit for i in range(1, 10) for suit in ['s', 'h', 'd']]
+        future_cards = [card for card in deck if card not in my_cards + board_cards]
+        for hand in itertools.combinations(my_cards + board_cards + future_cards, combo):
             hand_str = "_".join(sorted(hand))
-            if hand_str in self.pre_computed_probs:
-                prior[hand_str] = evaluate(my_cards, board_cards)
+            prior[hand_str] = evaluate(my_cards, board_cards)
         return prior
     
-    def mcmc_simulation(prior, num_samples):
+    def generate_prior_theirs(self, observation):
+        """
+        Generate a prior from the pre_computed_probs pickle file.
+
+        Args:
+            observation (dict): The observation of the current state.
+
+        Returns:
+            prior (dict): the prior probability distribution.
+        """
+        my_cards = observation["my_cards"]
+        board_cards = observation["board_cards"]
+        prior = {}
+        combo = observation["street"] + 2
+        deck = [str(i) + suit for i in range(1, 10) for suit in ['s', 'h', 'd']]
+        enemy_cards = [card for card in deck if card not in my_cards + board_cards]
+        for hand in itertools.combinations(enemy_cards + board_cards, combo):
+            hand_str = "_".join(sorted(hand))
+            enemy = [card for card in hand if card not in board_cards]
+            prior[hand_str] = evaluate(enemy, board_cards)
+        return prior
+    
+    def mcmc_simulation(self, prior, num_samples):
         """
         Perform MCMC simulation to generate a posterior distribution of equity in a hand.
 
@@ -115,7 +133,8 @@ class Player(Bot):
             posterior (dict): The posterior probability distribution.
         """
         posterior = {}
-        samples = np.random.choice(list(prior.keys()), size=num_samples, p=list(prior.values()))
+        ps = list(prior.values())/np.sum(list(prior.values()))
+        samples = np.random.choice(list(prior.keys()), size=num_samples, p=ps)
         for hand in samples:
             if hand in posterior:
                 posterior[hand] += prior[hand]
@@ -168,11 +187,10 @@ class Player(Bot):
 
         ###replace this code: this is just a rule based agent that plays any pair, same suited hand, or hands with straight potential
 
-
         #this gives us a prior distribution of our equity at each street
-        prior_us = self.generate_prior(observation)
+        prior_us = self.generate_prior_ours(observation)
         #this gives us a prior distribution of the opponent's equity at each street
-        prior_enemy = {hand: 1 - prob for hand, prob in prior_us.items()}
+        prior_enemy = self.generate_prior_theirs(observation)
 
 
         num_samples = 10000
@@ -182,26 +200,59 @@ class Player(Bot):
 
         #this gives us a simulated posterior distribution of the opponent's equity
         posterior_enemy = self.mcmc_simulation(prior_enemy, num_samples)
-
-        #pull random value from posteriors
-        my_equity = random.choice(list(posterior_us.values()))
-        opp_equity = random.choice(list(posterior_enemy.values()))
+        
+        #prior update step based on first action
+        #if this is true we have second action and need to update prior
+        #based on opponent bet
+        if CallAction in observation["legal_actions"]:
+            opp_bet = observation["opp_pip"]
+            if opp_bet == 400:
+                epsilon = np.random.uniform(0, 1)
+                if epsilon < 0.05:
+                    return CallAction()
+            if opp_bet > 200:
+                my_equity = random.choice(list(posterior_us.values())[:len(posterior_us)//2])
+                opp_equity = random.choice(list(posterior_enemy.values())[len(posterior_enemy)//2:])
+            else:
+                my_equity = random.choice(list(posterior_us.values())[len(posterior_us)//2:])
+                opp_equity = random.choice(list(posterior_enemy.values())[:len(posterior_enemy)//2])
+        
+        #else pull random value from posteriors if we are first action
+        else:
+            opp_stack = observation["opp_stack"]
+            if opp_stack == 400:
+                my_equity = random.choice(list(posterior_us.values()))
+                opp_equity = random.choice(list(posterior_enemy.values()))
+            elif opp_stack > 200:
+                my_equity = random.choice(list(posterior_us.values())[len(posterior_us)//2:])
+                opp_equity = random.choice(list(posterior_enemy.values())[:len(posterior_enemy)//2])
+            else:
+                my_equity = random.choice(list(posterior_us.values())[:len(posterior_us)//2])
+                opp_equity = random.choice(list(posterior_enemy.values())[len(posterior_enemy)//2:])
 
         #introduce irrationality in our agent
-        epsilon = random.randrange(0, 1, 0.1)
+        epsilon = np.random.uniform(0, 1)
         if epsilon < 0.05:
             if RaiseAction in observation["legal_actions"]:
                 amt = observation["max_raise"]
                 return RaiseAction(amt)
             else:
                 return FoldAction()
-            
+        
+        self.log.append(f"Our equity: {my_equity}")
+        self.log.append(f"Opponent equity: {opp_equity}")
         #otherwise, compare equities and proceed.
         if my_equity >= opp_equity:
-            if RaiseAction in observation["legal_actions"]:
-                amt = random.randint(observation["min_raise"], observation["max_raise"])
-                return RaiseAction(amt)
-            elif CallAction in observation["legal_actions"]:
+            equity_diff = ((my_equity - opp_equity)/opp_equity) * 100
+            if equity_diff > 20:
+                if RaiseAction in observation["legal_actions"]:
+                    stack_bet = int(0.5 * (observation["my_stack"] + observation["opp_stack"]))
+                    amt = max(observation["min_raise"], stack_bet)
+                    return RaiseAction(amt)
+                else:
+                    return CallAction()
+            
+            if CallAction in observation["legal_actions"]:
                 return CallAction()
             else:
                 return CheckAction()
