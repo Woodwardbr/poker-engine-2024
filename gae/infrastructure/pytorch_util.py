@@ -16,7 +16,37 @@ _str_to_activation = {
     'identity': nn.Identity(),
 }
 
+class MLP(nn.Module):
+    def __init__(self, input_size, size, output_size, n_layers, activation, output_activation):
+        super().__init__()
 
+        self.n_layers = n_layers
+        self.size = size
+        self.activation = activation
+        self.output_activation = output_activation
+        
+        
+        self.linear1 = nn.Linear(input_size, size)
+        self.linear2 = nn.Linear(size, size)
+        self.linear3 = nn.Linear(size, output_size)
+        self.activation = nn.ReLU()
+
+    def forward(self, x):
+        x = self.linear1(x)
+        x = self.activation(x)
+        for _ in range(self.n_layers - 1):
+            x = self.linear2(x)
+            x = self.activation(x)
+
+        output = self.linear3(x)
+
+        classes = output[:4]
+        classes = nn.functional.sigmoid(classes)
+
+        regressor = output[4]
+        regressor = nn.functional.relu(regressor)
+        return classes, regressor
+    
 def build_mlp(
         input_size: int,
         output_size: int,
@@ -44,26 +74,10 @@ def build_mlp(
     if isinstance(output_activation, str):
         output_activation = _str_to_activation[output_activation]
 
-    layers = []
-    in_size = input_size
-
-    for _ in range(n_layers):
-        layers.append(nn.Linear(in_size, size))
-        layers.append(activation)
-        in_size = size
-
-    layers.append(nn.Linear(in_size, output_size))
-    layers.append(output_activation)
-
-    output = nn.Sequential(*layers)
-
-    classes = output[:4]
-    classes = nn.functional.sigmoid(classes)
-
-    regressor = output[4]
-    regressor = nn.functional.relu(regressor)
+    mlp = MLP(input_size, size, output_size, n_layers, activation, output_activation)
     
-    return classes, regressor
+    return mlp
+
 
     
 class task_MLP(nn.Module):
