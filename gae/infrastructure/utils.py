@@ -68,24 +68,49 @@ def dict_obs_to_np_obs(dict_obs):
 def sample_trajectory(env, policy, max_path_length, render=False, render_mode=('rgb_array')):
     # TODO: get this from hw1
     obs = env.reset()
-    obs = list(obs[0])
-    turn = [True,False]
-    for i in range(2):
-        obs[i], turn[i] = dict_obs_to_np_obs(obs[i])
+    players = 1
+    if players == 2:
+        obs = list(obs[0])
+        turn = [True,False]
+        for i in range(2):
+            obs[i], turn[i] = dict_obs_to_np_obs(obs[i])
+    else:
+        obs = obs[0]
+        turn = True
+        obs, turn = dict_obs_to_np_obs(obs)
     obses, acts, rews, nobses, terms, imgs = [], [], [], [], [], []
     steps = 0
     while True:
-        for i in range(len(obs)):
-            if turn[i]:
-                obses.append(obs[i])
-                act = policy.get_action(obs[i])
+        if players == 2:
+            for i in range(len(obs)):
+                if turn[i]:
+                    obses.append(obs[i])
+                    act = policy.get_action(obs[i])
+                    act = act.astype(int)
+                    acts.append(act)
+                    nobs, rew, done, _, mode = env.step(act)
+                    for j in range(2):
+                        obs[j], turn[j] =  dict_obs_to_np_obs(nobs[j])
+                    nobses.append(obs[i])
+                    rews.append(rew[i])
+                    steps += 1
+
+                    if done or steps > max_path_length:
+                        terms.append(1)
+                        break
+                    else:
+                        terms.append(0)
+        else:
+            if turn:
+                obses.append(obs)
+                act = policy.get_action(obs)
                 act = act.astype(int)
                 acts.append(act)
                 nobs, rew, done, _, mode = env.step(act)
                 for j in range(2):
-                    obs[j], turn[j] =  dict_obs_to_np_obs(nobs[j])
-                nobses.append(obs[i])
-                rews.append(rew[i])
+                    obs, turn =  dict_obs_to_np_obs(nobs)
+                nobses.append(obs)
+                rews.append(rew)
                 steps += 1
 
                 if done or steps > max_path_length:

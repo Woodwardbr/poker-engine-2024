@@ -3,8 +3,8 @@ This file contains the base class that you should implement for your pokerbot.
 """
 
 from typing import Optional
-from skeleton.actions import Action, FoldAction, CallAction, CheckAction, RaiseAction
-from skeleton.states import GameState, RoundState, TerminalState
+from python_skeleton.skeleton.actions import Action, FoldAction, CallAction, CheckAction, RaiseAction
+from python_skeleton.skeleton.states import GameState, RoundState, TerminalState
 
 
 class Bot:

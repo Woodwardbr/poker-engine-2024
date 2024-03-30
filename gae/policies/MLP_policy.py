@@ -102,12 +102,6 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
         bet = bet_distribution.sample()
         bet = torch.clip(bet, observation[0,14], observation[0,15]) # Clip between max and min raise
         return np.concatenate([ptu.to_numpy(action), ptu.to_numpy(bet.squeeze(1))], axis=0)
-        # observation = ptu.from_numpy(observation)
-        # action = self.forward(observation)
-        # action = ptu.to_numpy(action)
-        # act_choice = np.argmax(action[:-1])
-        # raise_amt = action[-1]
-        # return np.array([act_choice, raise_amt])
 
     # update/train this policy
     def update(self, observations, actions, **kwargs):
@@ -119,10 +113,6 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
     # return more flexible objects, such as a
     # `torch.distributions.Distribution` object. It's up to you!
     def forward(self, observation: torch.FloatTensor, discrete=False):
-        # return self.mean_net(observation)
-        # logits = self.action_mlp(observation)
-        # action_distribution = distributions.Categorical(logits=logits)
-        # return action_distribution
         if discrete:
             logits = self.action_mlp(observation)
             # Define a mask to indicate which actions are legal

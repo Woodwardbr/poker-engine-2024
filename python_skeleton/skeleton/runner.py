@@ -9,8 +9,8 @@ import os
 import sys
 from typing import List
 
-from skeleton.actions import Action, FoldAction, CallAction, CheckAction, RaiseAction
-from skeleton.states import (
+from python_skeleton.skeleton.actions import Action, FoldAction, CallAction, CheckAction, RaiseAction
+from python_skeleton.skeleton.states import (
     GameState,
     RoundState,
     TerminalState,
@@ -18,7 +18,7 @@ from skeleton.states import (
     BIG_BLIND,
     SMALL_BLIND,
 )
-from skeleton.bot import Bot
+from python_skeleton.skeleton.bot import Bot
 
 shared_path = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..", "shared")

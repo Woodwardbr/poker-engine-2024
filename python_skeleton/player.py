@@ -9,11 +9,11 @@ from gae.policies.MLP_policy import MLPPolicyAC
 from gae.infrastructure.pytorch_util import build_mlp
 from typing import Optional
 
-from skeleton.actions import Action, CallAction, CheckAction, FoldAction, RaiseAction
-from skeleton.states import GameState, TerminalState, RoundState
-from skeleton.states import NUM_ROUNDS, STARTING_STACK, BIG_BLIND, SMALL_BLIND
-from skeleton.bot import Bot
-from skeleton.runner import parse_args, run_bot
+from python_skeleton.skeleton.actions import Action, CallAction, CheckAction, FoldAction, RaiseAction
+from python_skeleton.skeleton.states import GameState, TerminalState, RoundState
+from python_skeleton.skeleton.states import NUM_ROUNDS, STARTING_STACK, BIG_BLIND, SMALL_BLIND
+from python_skeleton.skeleton.bot import Bot
+from python_skeleton.skeleton.runner import parse_args, run_bot
 
 def card_to_int(card: str):
     rank, suit = card[0], card[1]
@@ -96,24 +96,46 @@ class Player(Bot):
     def dict_obs_to_np_obs(self, dict_obs):
         obs_arr = []
         legal_act_arr = [0,0,0,0]
-        obs_arr.extend(np.array([int(action in dict_obs["legal_actions"]) for action in [FoldAction, CallAction, CheckAction, RaiseAction]]).astype(np.int8))
+        if isinstance(dict_obs["legal_actions"], np.ndarray):
+            obs_arr.extend(dict_obs["legal_actions"])
+        else:
+            obs_arr.extend(np.array([int(action in dict_obs["legal_actions"]) for action in [FoldAction, CallAction, CheckAction, RaiseAction]]).astype(np.int8))
         obs_arr.append(dict_obs['street'])
         for i in range(len(dict_obs["my_cards"])):
-            obs_arr.append(card_to_int(dict_obs["my_cards"][i]))
+            if isinstance(dict_obs["my_cards"][i], int):
+                obs_arr.append(card_to_int(dict_obs["my_cards"][i]))
+            else:
+                obs_arr.append(dict_obs["my_cards"][i])
         
         for i in range(len(dict_obs["board_cards"])):
-            obs_arr.append(card_to_int(dict_obs["board_cards"][i]))
+            if isinstance(dict_obs["board_cards"][i], int):
+                obs_arr.append(card_to_int(dict_obs["board_cards"][i]))
+            else:
+                obs_arr.append(dict_obs["board_cards"][i])
 
         for i in range(2-len(dict_obs["board_cards"])):
             obs_arr.append(0)
-        obs_arr.append(dict_obs["my_pip"])
-        obs_arr.append(dict_obs["opp_pip"])
-        obs_arr.append(dict_obs["my_stack"])
-        obs_arr.append(dict_obs["opp_stack"])
-        obs_arr.append(dict_obs["my_bankroll"])
-        obs_arr.append(dict_obs["min_raise"])
-        obs_arr.append(dict_obs["max_raise"])
+        if isinstance(dict_obs["my_pip"], np.ndarray):
+            obs_arr.append(dict_obs["my_pip"].squeeze())
+            obs_arr.append(dict_obs["opp_pip"].squeeze())
+            obs_arr.append(dict_obs["my_stack"].squeeze())
+            obs_arr.append(dict_obs["opp_stack"].squeeze())
+            obs_arr.append(dict_obs["my_bankroll"].squeeze())
+            obs_arr.append(dict_obs["min_raise"].squeeze())
+            obs_arr.append(dict_obs["max_raise"].squeeze())
+        else:
+            obs_arr.append(dict_obs["my_pip"])
+            obs_arr.append(dict_obs["opp_pip"])
+            obs_arr.append(dict_obs["my_stack"])
+            obs_arr.append(dict_obs["opp_stack"])
+            obs_arr.append(dict_obs["my_bankroll"])
+            obs_arr.append(dict_obs["min_raise"])
+            obs_arr.append(dict_obs["max_raise"])
         return np.array(obs_arr)
+    
+    def get_action_pair(self, observation: dict):
+        obs_arr = self.dict_obs_to_np_obs(observation)
+        return self.policy.get_action(obs_arr).astype(int)
 
     def get_action(self, observation: dict) -> Action:
         """

@@ -4,6 +4,7 @@ import os
 import sys
 import time
 
+from python_skeleton.player import Player as Bot
 import gymnasium as gym
 from gymnasium import wrappers
 import numpy as np
@@ -45,7 +46,7 @@ class RL_Trainer(object):
 
         # Make the gym environment
         utils.register_custom_env()
-        self.env = gym.make(self.params['env_name'], num_rounds=1000)
+        self.env = gym.make(self.params['env_name'], num_rounds=1000, opp_bot=Bot())
         if 'env_wrappers' in self.params:
             # These operations are currently only for Atari envs
             self.env = Monitor(

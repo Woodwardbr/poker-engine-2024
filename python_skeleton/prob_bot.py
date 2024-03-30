@@ -6,12 +6,12 @@ import itertools
 import pickle
 from typing import Optional
 
-from skeleton.actions import Action, CallAction, CheckAction, FoldAction, RaiseAction
-from skeleton.states import GameState, TerminalState, RoundState
-from skeleton.states import NUM_ROUNDS, STARTING_STACK, BIG_BLIND, SMALL_BLIND
-from skeleton.bot import Bot
-from skeleton.runner import parse_args, run_bot
-from skeleton.evaluate import evaluate
+from python_skeleton.skeleton.actions import Action, CallAction, CheckAction, FoldAction, RaiseAction
+from python_skeleton.skeleton.states import GameState, TerminalState, RoundState
+from python_skeleton.skeleton.states import NUM_ROUNDS, STARTING_STACK, BIG_BLIND, SMALL_BLIND
+from python_skeleton.skeleton.bot import Bot
+from python_skeleton.skeleton.runner import parse_args, run_bot
+from python_skeleton.skeleton.evaluate import evaluate
 
 class Player(Bot):
     """
