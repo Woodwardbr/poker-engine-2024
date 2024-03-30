@@ -102,7 +102,7 @@ class Player(Bot):
             obs_arr.extend(np.array([int(action in dict_obs["legal_actions"]) for action in [FoldAction, CallAction, CheckAction, RaiseAction]]).astype(np.int8))
         obs_arr.append(dict_obs['street'])
         for i in range(len(dict_obs["my_cards"])):
-            if isinstance(dict_obs["my_cards"][i], int):
+            if isinstance(dict_obs["my_cards"][i], str):
                 obs_arr.append(card_to_int(dict_obs["my_cards"][i]))
             else:
                 obs_arr.append(dict_obs["my_cards"][i])
@@ -172,9 +172,10 @@ class Player(Bot):
         self.log.append("My bankroll: " + str(observation["my_bankroll"]))
 
         obs_arr = self.dict_obs_to_np_obs(observation)
-        self.log.append("Obs Arr:" + str(obs_arr))
 
         policy_action = self.policy.get_action(obs_arr).astype(int)
+        self.log.append("Obs Arr:" + str(obs_arr))
+        self.log.append("Action pair" + str(policy_action))
 
         match policy_action[0]:
             case 0:
