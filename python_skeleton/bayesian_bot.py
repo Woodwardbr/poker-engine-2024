@@ -241,6 +241,7 @@ class Player(Bot):
         
         self.log.append(f"Our equity: {my_equity}")
         self.log.append(f"Opponent equity: {opp_equity}")
+        print("VA Linux")
         #otherwise, compare equities and proceed.
         if my_equity >= opp_equity:
             equity_diff = ((my_equity - opp_equity)/opp_equity) * 100
