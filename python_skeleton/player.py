@@ -78,7 +78,7 @@ class Player(Bot):
 
         return self.log
 
-    def generate_prior(self, observation):
+    def generate_prior_ours(self, observation):
         """
         Generate a prior from the pre_computed_probs pickle file.
 
@@ -91,7 +91,29 @@ class Player(Bot):
         my_cards = observation["my_cards"]
         board_cards = observation["board_cards"]
         prior = {}
-        for hand in itertools.combinations(my_cards + board_cards, 2):
+        combo = observation["street"] + 2
+        for hand in itertools.combinations(my_cards + board_cards, combo):
+            hand_str = "_".join(sorted(hand))
+            prior[hand_str] = evaluate(my_cards, board_cards)
+        return prior
+    
+    def generate_prior_theirs(self, observation):
+        """
+        Generate a prior from the pre_computed_probs pickle file.
+
+        Args:
+            observation (dict): The observation of the current state.
+
+        Returns:
+            prior (dict): the prior probability distribution.
+        """
+        my_cards = observation["my_cards"]
+        board_cards = observation["board_cards"]
+        prior = {}
+        combo = observation["street"] + 2
+        deck = [str(i) + suit for i in range(1, 10) for suit in ['s', 'h', 'd']]
+        enemy_cards = [card for card in deck if card not in my_cards + board_cards]
+        for hand in itertools.combinations(enemy_cards + board_cards, combo):
             hand_str = "_".join(sorted(hand))
             prior[hand_str] = evaluate(my_cards, board_cards)
         return prior
@@ -163,9 +185,9 @@ class Player(Bot):
         ###replace this code: this is just a rule based agent that plays any pair, same suited hand, or hands with straight potential
 
         #this gives us a prior distribution of our equity at each street
-        prior_us = self.generate_prior(observation)
+        prior_us = self.generate_prior_ours(observation)
         #this gives us a prior distribution of the opponent's equity at each street
-        prior_enemy = {hand: 1 - prob for hand, prob in prior_us.items()}
+        prior_enemy = self.generate_prior_theirs(observation)
 
 
         num_samples = 10000
