@@ -242,25 +242,25 @@ class Player(Bot):
         self.log.append(f"Our equity: {my_equity}")
         self.log.append(f"Opponent equity: {opp_equity}")
         #otherwise, compare equities and proceed.
-        if my_equity >= opp_equity:
-            equity_diff = ((my_equity - opp_equity)/opp_equity) * 100
-            if equity_diff > 20:
-                if RaiseAction in observation["legal_actions"]:
-                    stack_bet = int(0.5 * (observation["my_stack"] + observation["opp_stack"]))
-                    amt = max(observation["min_raise"], stack_bet)
-                    return RaiseAction(amt)
-                else:
-                    return CallAction()
-            
-            if CallAction in observation["legal_actions"]:
+        equity_diff = ((my_equity - opp_equity)/(my_equity + opp_equity))
+        if equity_diff > 0.9:
+            if RaiseAction in observation["legal_actions"]:
+                stack_bet = int(equity_diff * (observation["my_stack"]))
+                amt = min(observation["max_raise"], stack_bet)
+                return RaiseAction(amt)
+            else:
                 return CallAction()
+        elif equity_diff > 0.5:
+            if RaiseAction in observation["legal_actions"]:
+                amt = random.randint(observation["min_raise"], observation["max_raise"])
+                return RaiseAction(amt)
             else:
-                return CheckAction()
+                return CallAction()
+        
+        if FoldAction in observation["legal_actions"]:
+            return FoldAction()
         else:
-            if CheckAction in observation["legal_actions"]:
-                return CheckAction()
-            else:
-                return FoldAction()
+            return CheckAction()
 
 if __name__ == '__main__':
     run_bot(Player(), parse_args())
