@@ -1,0 +1,14 @@
+numpy
+mujoco
+mujoco-py
+free-mujoco-py
+gym[box2d]
+pyglet
+tensorboard
+tensorboardX
+matplotlib
+patchelf
+torch
+pyvirtualdisplay
+IPython
+gym-notebook-wrapper

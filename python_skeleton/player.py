@@ -3,17 +3,28 @@ Simple example pokerbot, written in Python.
 """
 
 import random
+import torch
+import numpy as np
+from gae.policies.MLP_policy import MLPPolicyAC
+from gae.infrastructure.pytorch_util import build_mlp
 import pickle
 import itertools
 from typing import Optional
-import numpy as np
+from python_skeleton.skeleton.actions import Action, CallAction, CheckAction, FoldAction, RaiseAction
+from python_skeleton.skeleton.states import GameState, TerminalState, RoundState
+from python_skeleton.skeleton.states import NUM_ROUNDS, STARTING_STACK, BIG_BLIND, SMALL_BLIND
+from python_skeleton.skeleton.bot import Bot
+from python_skeleton.skeleton.runner import parse_args, run_bot
+from python_skeleton.skeleton.evaluate import evaluate
 
-from skeleton.actions import Action, CallAction, CheckAction, FoldAction, RaiseAction
-from skeleton.states import GameState, TerminalState, RoundState
-from skeleton.states import NUM_ROUNDS, STARTING_STACK, BIG_BLIND, SMALL_BLIND
-from skeleton.bot import Bot
-from skeleton.runner import parse_args, run_bot
-from skeleton.evaluate import evaluate
+
+def card_to_int(card: str):
+    rank, suit = card[0], card[1]
+    suit = {"s": 0, "h": 1, "d": 2}[suit]
+    return (suit * 10 + int(rank))
+
+
+
 
 class Player(Bot):
     """
@@ -30,6 +41,17 @@ class Player(Bot):
         Returns:
         Nothing.
         """
+        self.policy = MLPPolicyAC(
+            ac_dim=2,
+            ob_dim=16,
+            n_layers=2,
+            size=64,
+            learning_rate=5e-3,
+        )
+
+        self.policy.action_mlp.load_state_dict(torch.load('action_model.pth', map_location=torch.device('cpu')))
+        self.policy.bet_mlp.load_state_dict(torch.load('bet_model.pth', map_location=torch.device('cpu')))
+
         self.log = []
         #self.pre_computed_probs = pickle.load(open("python_skeleton/skeleton/pre_computed_probs.pkl", "rb"))
         pass
@@ -78,71 +100,51 @@ class Player(Bot):
 
         return self.log
 
-    def generate_prior_ours(self, observation):
-        """
-        Generate a prior from the pre_computed_probs pickle file.
 
-        Args:
-            observation (dict): The observation of the current state.
-
-        Returns:
-            prior (dict): the prior probability distribution.
-        """
-        my_cards = observation["my_cards"]
-        board_cards = observation["board_cards"]
-        prior = {}
-        combo = observation["street"] + 2
-        deck = [str(i) + suit for i in range(1, 10) for suit in ['s', 'h', 'd']]
-        future_cards = [card for card in deck if card not in my_cards + board_cards]
-        for hand in itertools.combinations(my_cards + board_cards + future_cards, combo):
-            hand_str = "_".join(sorted(hand))
-            prior[hand_str] = evaluate(my_cards, board_cards)
-        return prior
-    
-    def generate_prior_theirs(self, observation):
-        """
-        Generate a prior from the pre_computed_probs pickle file.
-
-        Args:
-            observation (dict): The observation of the current state.
-
-        Returns:
-            prior (dict): the prior probability distribution.
-        """
-        my_cards = observation["my_cards"]
-        board_cards = observation["board_cards"]
-        prior = {}
-        combo = observation["street"] + 2
-        deck = [str(i) + suit for i in range(1, 10) for suit in ['s', 'h', 'd']]
-        enemy_cards = [card for card in deck if card not in my_cards + board_cards]
-        for hand in itertools.combinations(enemy_cards + board_cards, combo):
-            hand_str = "_".join(sorted(hand))
-            enemy = [card for card in hand if card not in board_cards]
-            prior[hand_str] = evaluate(enemy, board_cards)
-        return prior
-    
-    def mcmc_simulation(self, prior, num_samples):
-        """
-        Perform MCMC simulation to generate a posterior distribution of equity in a hand.
-
-        Args:
-            prior (dict): The prior probability distribution.
-            num_samples (int): The number of MCMC samples to generate.
-
-        Returns:
-            posterior (dict): The posterior probability distribution.
-        """
-        posterior = {}
-        ps = list(prior.values())/np.sum(list(prior.values()))
-        samples = np.random.choice(list(prior.keys()), size=num_samples, p=ps)
-        for hand in samples:
-            if hand in posterior:
-                posterior[hand] += prior[hand]
+    def dict_obs_to_np_obs(self, dict_obs):
+        obs_arr = []
+        legal_act_arr = [0,0,0,0]
+        if isinstance(dict_obs["legal_actions"], np.ndarray):
+            obs_arr.extend(dict_obs["legal_actions"])
+        else:
+            obs_arr.extend(np.array([int(action in dict_obs["legal_actions"]) for action in [FoldAction, CallAction, CheckAction, RaiseAction]]).astype(np.int8))
+        obs_arr.append(dict_obs['street'])
+        for i in range(len(dict_obs["my_cards"])):
+            if isinstance(dict_obs["my_cards"][i], str):
+                obs_arr.append(card_to_int(dict_obs["my_cards"][i]))
             else:
-                posterior[hand] = 1
-        for hand in posterior:
-            posterior[hand] /= num_samples
-        return posterior
+                obs_arr.append(dict_obs["my_cards"][i])
+        
+        for i in range(len(dict_obs["board_cards"])):
+            if isinstance(dict_obs["board_cards"][i], str):
+                obs_arr.append(card_to_int(dict_obs["board_cards"][i]))
+            else:
+                obs_arr.append(dict_obs["board_cards"][i])
+
+        for i in range(2-len(dict_obs["board_cards"])):
+            obs_arr.append(0)
+        if isinstance(dict_obs["my_pip"], np.ndarray):
+            obs_arr.append(dict_obs["my_pip"].squeeze())
+            obs_arr.append(dict_obs["opp_pip"].squeeze())
+            obs_arr.append(dict_obs["my_stack"].squeeze())
+            obs_arr.append(dict_obs["opp_stack"].squeeze())
+            obs_arr.append(dict_obs["my_bankroll"].squeeze())
+            obs_arr.append(dict_obs["min_raise"].squeeze())
+            obs_arr.append(dict_obs["max_raise"].squeeze())
+        else:
+            obs_arr.append(dict_obs["my_pip"])
+            obs_arr.append(dict_obs["opp_pip"])
+            obs_arr.append(dict_obs["my_stack"])
+            obs_arr.append(dict_obs["opp_stack"])
+            obs_arr.append(dict_obs["my_bankroll"])
+            obs_arr.append(dict_obs["min_raise"])
+            obs_arr.append(dict_obs["max_raise"])
+        return np.array(obs_arr)
+    
+    def get_action_pair(self, observation: dict):
+        obs_arr = self.dict_obs_to_np_obs(observation)
+        return self.policy.get_action(obs_arr).astype(int)
+
 
     def get_action(self, observation: dict) -> Action:
         """
@@ -177,115 +179,23 @@ class Player(Bot):
         self.log.append("My stack: " + str(observation["my_stack"]))
         self.log.append("My contribution: " + str(my_contribution))
         self.log.append("My bankroll: " + str(observation["my_bankroll"]))
+        obs_arr = self.dict_obs_to_np_obs(observation)
 
-        ###replace this code: this is just a rule based agent that plays any pair, same suited hand, or hands with straight potential
+        policy_action = self.policy.get_action(obs_arr).astype(int)
+        self.log.append("Obs Arr:" + str(obs_arr))
+        self.log.append("Action pair" + str(policy_action))
 
-        #write code to estimate the opponent hand probabilities
-        #sum up all the probabilities of the opponent having a hand better than yours
- 
-        #my_equity = self.pre_computed_probs['_'.join(sorted(observation["my_cards"])) + '_' + '_'.join(sorted(observation["board_cards"]))]
-
-        ###replace this code: this is just a rule based agent that plays any pair, same suited hand, or hands with straight potential
-        if observation["street"] == 0:
-            first_card = observation["my_cards"][0][0]
-            second_card = observation["my_cards"][1][0]
-            if first_card == second_card:
-                if RaiseAction in observation["legal_actions"]:
-                    amt = random.randint(observation["min_raise"], observation["max_raise"])
-                    return RaiseAction(amt)
-                elif CallAction in observation["legal_actions"]:
-                    return CallAction()
-                else:
-                    return CheckAction()
-            if observation["my_cards"][0][1] == observation["my_cards"][1][1]:
-                if RaiseAction in observation["legal_actions"]:
-                    amt = random.randint(observation["min_raise"], observation["max_raise"])
-                    return RaiseAction(amt)
-                elif CallAction in observation["legal_actions"]:
-                    return CallAction()
-                else:
-                    return CheckAction()
-            if abs(int(first_card) - int(second_card)) <= 3:
-                if CallAction in observation["legal_actions"]:
-                    return CallAction()
-                else:
-                    return CheckAction()
-            if FoldAction in observation["legal_actions"]:
+        match policy_action[0]:
+            case 0:
                 return FoldAction()
-        #this gives us a prior distribution of our equity at each street
-        prior_us = self.generate_prior_ours(observation)
-        #this gives us a prior distribution of the opponent's equity at each street
-        prior_enemy = self.generate_prior_theirs(observation)
-
-
-        num_samples = 10000
-
-        #this gives us a simulated posterior distribution of our equity
-        posterior_us = self.mcmc_simulation(prior_us, num_samples)
-
-        #this gives us a simulated posterior distribution of the opponent's equity
-        posterior_enemy = self.mcmc_simulation(prior_enemy, num_samples)
-        
-        #prior update step based on first action
-        #if this is true we have second action and need to update prior
-        #based on opponent bet
-        if CallAction in observation["legal_actions"]:
-            opp_bet = observation["opp_pip"]
-            if opp_bet == 400:
-                epsilon = np.random.uniform(0, 1)
-                if epsilon < 0.05:
-                    return CallAction()
-            if opp_bet > 200:
-                my_equity = random.choice(list(posterior_us.values())[:len(posterior_us)//2])
-                opp_equity = random.choice(list(posterior_enemy.values())[len(posterior_enemy)//2:])
-            else:
-                my_equity = random.choice(list(posterior_us.values())[len(posterior_us)//2:])
-                opp_equity = random.choice(list(posterior_enemy.values())[:len(posterior_enemy)//2])
-        
-        #else pull random value from posteriors if we are first action
-        else:
-            opp_stack = observation["opp_stack"]
-            if opp_stack == 400:
-                my_equity = random.choice(list(posterior_us.values()))
-                opp_equity = random.choice(list(posterior_enemy.values()))
-            elif opp_stack > 200:
-                my_equity = random.choice(list(posterior_us.values())[len(posterior_us)//2:])
-                opp_equity = random.choice(list(posterior_enemy.values())[:len(posterior_enemy)//2])
-            else:
-                my_equity = random.choice(list(posterior_us.values())[:len(posterior_us)//2])
-                opp_equity = random.choice(list(posterior_enemy.values())[len(posterior_enemy)//2:])
-
-        #introduce irrationality in our agent
-        epsilon = np.random.uniform(0, 1)
-        if epsilon < 0.05:
-            if RaiseAction in observation["legal_actions"]:
-                amt = observation["max_raise"]
-                return RaiseAction(amt)
-            else:
-                return FoldAction()
-        
-        self.log.append(f"Our equity: {my_equity}")
-        self.log.append(f"Opponent equity: {opp_equity}")
-        #otherwise, compare equities and proceed.
-        equity_diff = ((my_equity - opp_equity)/(my_equity + opp_equity))
-        if equity_diff > 0.9:
-            if RaiseAction in observation["legal_actions"]:
-                stack_bet = int(equity_diff * (observation["my_stack"]))
-                amt = min(observation["max_raise"], stack_bet)
-                return RaiseAction(amt)
-            else:
+            case 1:
                 return CallAction()
-        elif equity_diff > 0.5:
-            if RaiseAction in observation["legal_actions"]:
-                amt = random.randint(observation["min_raise"], observation["max_raise"])
-                return RaiseAction(amt)
-            else:
-                return CallAction()
-        
-        if FoldAction in observation["legal_actions"]:
-            return FoldAction()
-        else:
-            return CheckAction()
+            case 2:
+                return CheckAction()
+            case 3:
+                return RaiseAction(policy_action[1])
+
+        return FoldAction()
 
 if __name__ == '__main__':
     run_bot(Player(), parse_args())

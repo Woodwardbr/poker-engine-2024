@@ -1,0 +1,1 @@
+python gae/scripts/run_hw3_actor_critic.py --env_name PokerEnv -n 100 -b 1000 --exp_name test -ntu 10
