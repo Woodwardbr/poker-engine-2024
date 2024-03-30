@@ -38,18 +38,21 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
         self.nn_baseline = nn_baseline
 
         # Action NN
-        self.action_mlp = ptu.build_critic_mlp(input_size=self.ob_dim,
+        self.action_mlp = ptu.build_mlp(input_size=self.ob_dim,
                                         output_size=4,
                                         n_layers=self.n_layers,
-                                        size=self.size)
+                                        size=self.size,
+                                        output_activation='softmax')
         self.action_mlp.to(ptu.device)
         self.action_optimizer = optim.Adam(self.action_mlp.parameters(),
                                     self.learning_rate)
 
         # Betting NN
-        self.bet_mlp = ptu.build_critic_mlp(input_size=self.ob_dim,
+        self.bet_mlp = ptu.build_mlp(input_size=self.ob_dim,
                                     output_size=1,
-                                    n_layers=self.n_layers, size=self.size)
+                                    n_layers=self.n_layers, 
+                                    size=self.size,
+                                    output_activation='softplus')
         self.logstd = nn.Parameter(
             torch.zeros(1, dtype=torch.float32, device=ptu.device)
         )

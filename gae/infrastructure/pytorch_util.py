@@ -14,71 +14,72 @@ _str_to_activation = {
     'selu': nn.SELU(),
     'softplus': nn.Softplus(),
     'identity': nn.Identity(),
+    'softmax': nn.Softmax()
 }
 
-class MLP(nn.Module):
-    def __init__(self, input_size, size, output_size, n_layers, activation, output_activation):
-        super().__init__()
+# class MLP(nn.Module):
+#     def __init__(self, input_size, size, output_size, n_layers, activation, output_activation):
+#         super().__init__()
 
-        self.n_layers = n_layers
-        self.size = size
-        self.activation = activation
-        self.output_activation = output_activation
+#         self.n_layers = n_layers
+#         self.size = size
+#         self.activation = activation
+#         self.output_activation = output_activation
         
         
-        self.linear1 = nn.Linear(input_size, size)
-        self.linear2 = nn.Linear(size, size)
-        self.linear3 = nn.Linear(size, output_size)
-        self.activation = nn.ReLU()
+#         self.linear1 = nn.Linear(input_size, size)
+#         self.linear2 = nn.Linear(size, size)
+#         self.linear3 = nn.Linear(size, output_size)
+#         self.activation = nn.ReLU()
 
-    def forward(self, x):
-        x = self.linear1(x)
-        x = self.activation(x)
-        for _ in range(self.n_layers - 1):
-            x = self.linear2(x)
-            x = self.activation(x)
+#     def forward(self, x):
+#         x = self.linear1(x)
+#         x = self.activation(x)
+#         for _ in range(self.n_layers - 1):
+#             x = self.linear2(x)
+#             x = self.activation(x)
 
-        output = self.linear3(x).squeeze()
+#         output = self.linear3(x).squeeze()
 
-        classes = output[:4]
-        classes = nn.functional.sigmoid(classes)
+#         classes = output[:4]
+#         classes = nn.functional.sigmoid(classes)
 
-        regressor = output[4]
-        regressor = nn.functional.relu(regressor)
-        return torch.cat([classes, regressor.unsqueeze(0)], axis=0)
+#         regressor = output[4]
+#         regressor = nn.functional.relu(regressor)
+#         return torch.cat([classes, regressor.unsqueeze(0)], axis=0)
     
+# def build_mlp(
+#         input_size: int,
+#         output_size: int,
+#         n_layers: int,
+#         size: int,
+#         activation: Activation = 'tanh',
+#         output_activation: Activation = 'identity',
+# ):
+#     """
+#         Builds a feedforward neural network
+#         arguments:
+#             input_placeholder: placeholder variable for the state (batch_size, input_size)
+#             scope: variable scope of the network
+#             n_layers: number of hidden layers
+#             size: dimension of each hidden layer
+#             activation: activation of each hidden layer
+#             input_size: size of the input layer
+#             output_size: size of the output layer
+#             output_activation: activation of the output layer
+#         returns:
+#             output_placeholder: the result of a forward pass through the hidden layers + the output layer
+#     """
+#     if isinstance(activation, str):
+#         activation = _str_to_activation[activation]
+#     if isinstance(output_activation, str):
+#         output_activation = _str_to_activation[output_activation]
+
+#     mlp = MLP(input_size, size, output_size, n_layers, activation, output_activation)
+    
+#     return mlp
+
 def build_mlp(
-        input_size: int,
-        output_size: int,
-        n_layers: int,
-        size: int,
-        activation: Activation = 'tanh',
-        output_activation: Activation = 'identity',
-):
-    """
-        Builds a feedforward neural network
-        arguments:
-            input_placeholder: placeholder variable for the state (batch_size, input_size)
-            scope: variable scope of the network
-            n_layers: number of hidden layers
-            size: dimension of each hidden layer
-            activation: activation of each hidden layer
-            input_size: size of the input layer
-            output_size: size of the output layer
-            output_activation: activation of the output layer
-        returns:
-            output_placeholder: the result of a forward pass through the hidden layers + the output layer
-    """
-    if isinstance(activation, str):
-        activation = _str_to_activation[activation]
-    if isinstance(output_activation, str):
-        output_activation = _str_to_activation[output_activation]
-
-    mlp = MLP(input_size, size, output_size, n_layers, activation, output_activation)
-    
-    return mlp
-
-def build_critic_mlp(
         input_size: int,
         output_size: int,
         n_layers: int,
@@ -101,58 +102,6 @@ def build_critic_mlp(
     return nn.Sequential(*layers)
 
     
-class task_MLP(nn.Module):
-    def __init__(self, input_size, size, output_size, n_layers, activation, output_activation):
-        super().__init__()
-
-        self.n_layers = n_layers
-        self.size = size
-        self.activation = activation
-        self.output_activation = output_activation
-        
-        
-        self.linear1 = nn.Linear(input_size, size)
-        self.linear2 = nn.Linear(size, size)
-        self.linear3 = nn.Linear(size, output_size)
-        self.activation = nn.ReLU()
-
-    def forward(self, x):
-        x = self.linear1(x)
-        x = self.activation(x)
-        for _ in range(self.n_layers - 1):
-            x = self.linear2(x)
-            x = self.activation(x)
-
-        x = self.linear3(x)
-        x = nn.functional.sigmoid(x)
-        return x
-
-class regress_MLP(nn.Module):
-    def __init__(self, input_size, size, output_size, n_layers, activation, output_activation):
-        super().__init__()
-
-        self.n_layers = n_layers
-        self.size = size
-        self.activation = activation
-        self.output_activation = output_activation
-          
-        self.linear1 = nn.Linear(input_size, size)
-        self.linear2 = nn.Linear(size, size)
-        self.linear3 = nn.Linear(size, output_size)
-        self.activation = nn.ReLU()
-
-
-    def forward(self, x):
-        x = self.linear1(x)
-        x = self.activation(x)
-        for _ in range(self.n_layers - 1):
-            x = self.linear2(x)
-            x = self.activation(x)
-
-        x = self.linear3(x)
-        x = nn.functional.relu(x)
-        
-        return x
 device = None
 
 

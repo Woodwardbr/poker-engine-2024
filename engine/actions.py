@@ -5,6 +5,7 @@ from typing import Union
 FoldAction = namedtuple("FoldAction", [])
 CallAction = namedtuple("CallAction", [])
 CheckAction = namedtuple("CheckAction", [])
+IlegalAction = namedtuple("IllegalAction", [])
 # we coalesce BetAction and RaiseAction for convenience
 RaiseAction = namedtuple("RaiseAction", ["amount"])
 Action = Union[FoldAction, CallAction, CheckAction, RaiseAction]
