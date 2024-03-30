@@ -3,6 +3,10 @@ Simple example pokerbot, written in Python.
 """
 
 import random
+import torch
+import numpy as np
+from gae.policies.MLP_policy import MLPPolicyAC
+from gae.infrastructure.pytorch_util import build_mlp
 from typing import Optional
 
 from skeleton.actions import Action, CallAction, CheckAction, FoldAction, RaiseAction
@@ -26,6 +30,17 @@ class Player(Bot):
         Returns:
         Nothing.
         """
+        self.policy = MLPPolicyAC(
+            ac_dim=2,
+            ob_dim=19,
+            n_layers=2,
+            size=64,
+            learning_rate=5e-3,
+        )
+
+        self.policy.action_mlp.load_state_dict(torch.load('action_model.pth', map_location=torch.device('cpu')))
+        self.policy.bet_mlp.load_state_dict(torch.load('bet_model.pth', map_location=torch.device('cpu')))
+
         self.log = []
         pass
 
@@ -73,6 +88,15 @@ class Player(Bot):
 
         return self.log
 
+    def dict_obs_to_np_obs(self, dict_obs):
+        obs_arr = []
+        for o in dict_obs.values():
+            if isinstance(o, int):
+                obs_arr.append(o)
+            elif isinstance(o, np.ndarray):
+                obs_arr.extend(o.tolist())
+        return np.array(obs_arr[1:]), dict_obs['is_my_turn']==1
+
     def get_action(self, observation: dict) -> Action:
         """
         Where the magic happens - your code should implement this function.
@@ -107,13 +131,21 @@ class Player(Bot):
         self.log.append("My contribution: " + str(my_contribution))
         self.log.append("My bankroll: " + str(observation["my_bankroll"]))
 
-        if RaiseAction in observation["legal_actions"] and random.random() < 0.99:
-            min_cost = observation["min_raise"] - observation["my_pip"] # the cost of a minimum bet/raise
-            max_cost = observation["max_raise"] - observation["my_pip"] # the cost of a maximum bet/raise
-            return RaiseAction(observation["max_raise"])
-        if CheckAction in observation["legal_actions"]:
-            return CheckAction()
-        return CallAction()
+        obs_arr, my_turn = self.dict_obs_to_np_obs(observation)
+        policy_action = self.policy.get_action(obs_arr)
+        action_type = None
+        match policy_action[0]:
+            case 0:
+                action_type = FoldAction()
+            case 1:
+                action_type = CallAction()
+            case 2:
+                action_type = CheckAction()
+            case 3:
+                action_type = RaiseAction(policy_action[1])
+                
+        return action_type
+
 
 if __name__ == '__main__':
     run_bot(Player(), parse_args())

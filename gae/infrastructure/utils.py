@@ -63,38 +63,39 @@ def dict_obs_to_np_obs(dict_obs):
             obs_arr.append(o)
         elif isinstance(o, np.ndarray):
             obs_arr.extend(o.tolist())
-    return np.array(obs_arr[1:])
+    return np.array(obs_arr[1:]), dict_obs['is_my_turn']==1
 
 def sample_trajectory(env, policy, max_path_length, render=False, render_mode=('rgb_array')):
     # TODO: get this from hw1
     obs = env.reset()
     obs = list(obs[0])
+    turn = [True,False]
     for i in range(2):
-        obs[i] = dict_obs_to_np_obs(obs[i])
+        obs[i], turn[i] = dict_obs_to_np_obs(obs[i])
     obses, acts, rews, nobses, terms, imgs = [], [], [], [], [], []
     steps = 0
     while True:
         for i in range(len(obs)):
-            obses.append(obs[i])
-            act = policy.get_action(obs[i])
-            act = act.astype(int)
-            acts.append(act)
-            nobs, rew, done, _, mode = env.step(act)
-            nobs_arr =  dict_obs_to_np_obs(nobs[i].copy())
-            nobses.append(nobs_arr)
-            rews.append(rew[0])
-            obs[i] = nobs_arr
-            steps += 1
+            if turn[i]:
+                obses.append(obs[i])
+                act = policy.get_action(obs[i])
+                act = act.astype(int)
+                acts.append(act)
+                nobs, rew, done, _, mode = env.step(act)
+                for j in range(2):
+                    obs[j], turn[j] =  dict_obs_to_np_obs(nobs[j])
+                nobses.append(obs[i])
+                rews.append(rew[i])
+                steps += 1
 
-            if done or steps > max_path_length:
-                terms.append(1)
-                break
-            else:
-                terms.append(0)
+                if done or steps > max_path_length:
+                    terms.append(1)
+                    break
+                else:
+                    terms.append(0)
 
         if done:
             break
-
     return Path(obses, imgs, acts, rews, nobses, terms)
 
 def sample_trajectories(env, policy, min_timesteps_per_batch, max_path_length, render=False, render_mode=('rgb_array')):

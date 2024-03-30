@@ -100,6 +100,7 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
         observation[0,0:4] = action_taken.to(int)
         bet_distribution = self.forward(observation, discrete=False)
         bet = bet_distribution.sample()
+        bet = torch.clip(bet, observation[0,14], observation[0,15]) # Clip between max and min raise
         return np.concatenate([ptu.to_numpy(action), ptu.to_numpy(bet.squeeze(1))], axis=0)
         # observation = ptu.from_numpy(observation)
         # action = self.forward(observation)
@@ -124,7 +125,13 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
         # return action_distribution
         if discrete:
             logits = self.action_mlp(observation)
-            action_distribution = distributions.Categorical(logits=logits)
+            # Define a mask to indicate which actions are legal
+            legal_mask = observation[0,0:4].to(bool)  # Assuming the second action is illegal
+
+            # Set the logits of illegal actions to a very large negative value
+            legal_logits = logits.clone()
+            legal_logits[0,~legal_mask] = float('-inf')
+            action_distribution = distributions.Categorical(logits=legal_logits)
             return action_distribution
         else:
             batch_mean = self.bet_mlp(observation)

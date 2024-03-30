@@ -133,6 +133,10 @@ class RL_Trainer(object):
                 print("\nTraining agent...")
             self.train_agent()
 
+        torch.save(self.agent.actor.action_mlp.state_dict(), 'action_model.pth')
+        torch.save(self.agent.actor.bet_mlp.state_dict(), 'bet_model.pth')
+
+
     ####################################
     ####################################
 
