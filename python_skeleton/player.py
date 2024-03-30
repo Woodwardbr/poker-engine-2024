@@ -7,18 +7,24 @@ import torch
 import numpy as np
 from gae.policies.MLP_policy import MLPPolicyAC
 from gae.infrastructure.pytorch_util import build_mlp
+import pickle
+import itertools
 from typing import Optional
-
 from python_skeleton.skeleton.actions import Action, CallAction, CheckAction, FoldAction, RaiseAction
 from python_skeleton.skeleton.states import GameState, TerminalState, RoundState
 from python_skeleton.skeleton.states import NUM_ROUNDS, STARTING_STACK, BIG_BLIND, SMALL_BLIND
 from python_skeleton.skeleton.bot import Bot
 from python_skeleton.skeleton.runner import parse_args, run_bot
+from python_skeleton.skeleton.evaluate import evaluate
+
 
 def card_to_int(card: str):
     rank, suit = card[0], card[1]
     suit = {"s": 0, "h": 1, "d": 2}[suit]
     return (suit * 10 + int(rank))
+
+
+
 
 class Player(Bot):
     """
@@ -47,6 +53,7 @@ class Player(Bot):
         self.policy.bet_mlp.load_state_dict(torch.load('bet_model.pth', map_location=torch.device('cpu')))
 
         self.log = []
+        #self.pre_computed_probs = pickle.load(open("python_skeleton/skeleton/pre_computed_probs.pkl", "rb"))
         pass
 
     def handle_new_round(self, game_state: GameState, round_state: RoundState, active: int) -> None:
@@ -93,6 +100,7 @@ class Player(Bot):
 
         return self.log
 
+
     def dict_obs_to_np_obs(self, dict_obs):
         obs_arr = []
         legal_act_arr = [0,0,0,0]
@@ -137,6 +145,7 @@ class Player(Bot):
         obs_arr = self.dict_obs_to_np_obs(observation)
         return self.policy.get_action(obs_arr).astype(int)
 
+
     def get_action(self, observation: dict) -> Action:
         """
         Where the magic happens - your code should implement this function.
@@ -170,7 +179,6 @@ class Player(Bot):
         self.log.append("My stack: " + str(observation["my_stack"]))
         self.log.append("My contribution: " + str(my_contribution))
         self.log.append("My bankroll: " + str(observation["my_bankroll"]))
-
         obs_arr = self.dict_obs_to_np_obs(observation)
 
         policy_action = self.policy.get_action(obs_arr).astype(int)
@@ -188,7 +196,6 @@ class Player(Bot):
                 return RaiseAction(policy_action[1])
 
         return FoldAction()
-
 
 if __name__ == '__main__':
     run_bot(Player(), parse_args())
