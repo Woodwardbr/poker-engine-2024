@@ -38,14 +38,14 @@ class MLP(nn.Module):
             x = self.linear2(x)
             x = self.activation(x)
 
-        output = self.linear3(x)
+        output = self.linear3(x).squeeze()
 
         classes = output[:4]
         classes = nn.functional.sigmoid(classes)
 
         regressor = output[4]
         regressor = nn.functional.relu(regressor)
-        return classes, regressor
+        return torch.cat([classes, regressor.unsqueeze(0)], axis=0)
     
 def build_mlp(
         input_size: int,

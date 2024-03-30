@@ -19,7 +19,7 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
                  ob_dim,
                  n_layers,
                  size,
-                 discrete=False,
+                 discrete=True,
                  learning_rate=1e-4,
                  training=True,
                  nn_baseline=False,
@@ -91,8 +91,7 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
             observation = obs[None]
 
         observation = ptu.from_numpy(observation)
-        action_distribution = self.forward(observation)
-        action = action_distribution.sample()
+        action = self.forward(observation)
         action = ptu.to_numpy(action)
         act_choice = np.argmax(action[:-1])
         raise_amt = action[-1]
@@ -108,21 +107,7 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
     # return more flexible objects, such as a
     # `torch.distributions.Distribution` object. It's up to you!
     def forward(self, observation: torch.FloatTensor):
-        # TODO: get this from hw1 or hw2
-        if self.discrete:
-            logits = self.logits_na(observation)
-            action_distribution = distributions.Categorical(logits=logits)
-            return action_distribution
-        else:
-            batch_mean = self.mean_net(observation)
-            scale_tril = torch.diag(torch.exp(self.logstd))
-            batch_dim = batch_mean.shape[0]
-            batch_scale_tril = scale_tril.repeat(batch_dim, 1, 1)
-            action_distribution = distributions.MultivariateNormal(
-                batch_mean,
-                scale_tril=batch_scale_tril,
-            )
-            return action_distribution
+        return self.mean_net(observation)
 
 #####################################################
 #####################################################

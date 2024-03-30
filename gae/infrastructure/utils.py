@@ -56,40 +56,41 @@ def mean_squared_error(a, b):
 ############################################
 ############################################
 
+def dict_obs_to_np_obs(dict_obs):
+    obs_arr = []
+    for o in dict_obs.values():
+        if isinstance(o, int):
+            obs_arr.append(o)
+        elif isinstance(o, np.ndarray):
+            obs_arr.extend(o.tolist())
+    return np.array(obs_arr[1:])
+
 def sample_trajectory(env, policy, max_path_length, render=False, render_mode=('rgb_array')):
     # TODO: get this from hw1
     obs = env.reset()
+    obs = list(obs[0])
+    for i in range(2):
+        obs[i] = dict_obs_to_np_obs(obs[i])
     obses, acts, rews, nobses, terms, imgs = [], [], [], [], [], []
     steps = 0
     while True:
-
-        obs = obs[0]
-
         for i in range(len(obs)):
-            obs_player = obs[i]
-            obs_arr = []
-            for o in obs[1].values():
-                if isinstance(o, int):
-                    obs_arr.append(o)
-                elif isinstance(o, np.ndarray):
-                    obs_arr.extend(o.tolist())
-            obs_arr = np.array(obs_arr)
-            obses.append(obs_arr)
-            act = policy.get_action(obs_arr)[0]
-
-
-            acts.append(np.array([act_choice, raise_amt]))
+            obses.append(obs[i])
+            act = policy.get_action(obs[i])
+            act = act.astype(int)
+            acts.append(act)
             nobs, rew, done, _, mode = env.step(act)
-            nobses.append(nobs)
-            rews.append(rew)
-            obs = nobs.copy()
+            nobs_arr =  dict_obs_to_np_obs(nobs[i].copy())
+            nobses.append(nobs_arr)
+            rews.append(rew[0])
+            obs[i] = nobs_arr
             steps += 1
 
-        if done or steps > max_path_length:
-            terms.append(1)
-            break
-        else:
-            terms.append(0)
+            if done or steps > max_path_length:
+                terms.append(1)
+                break
+            else:
+                terms.append(0)
 
     return Path(obses, imgs, acts, rews, nobses, terms)
 

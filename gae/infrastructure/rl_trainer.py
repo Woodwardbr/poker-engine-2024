@@ -73,8 +73,8 @@ class RL_Trainer(object):
         # Observation and action sizes
         
         # Two player has obs as a tuple
-        ob_dim = 20
-        ac_dim = 2
+        ob_dim = 19
+        ac_dim = 5
         self.params['agent_params']['ac_dim'] = ac_dim
         self.params['agent_params']['ob_dim'] = ob_dim
 
