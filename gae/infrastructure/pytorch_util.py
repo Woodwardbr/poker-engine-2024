@@ -81,7 +81,6 @@ class task_MLP(nn.Module):
         self.linear3 = nn.Linear(size, output_size)
         self.activation = nn.ReLU()
 
-
     def forward(self, x):
         x = self.linear1(x)
         x = self.activation(x)
