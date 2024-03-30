@@ -141,14 +141,31 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
 class MLPPolicyAC(MLPPolicy):
     def update(self, observations, actions, adv_n=None):
         # TODO: update the policy and return the loss
+        observations_bet = observations.copy()
         observations = ptu.from_numpy(observations)
+        observations_bet = ptu.from_numpy(observations_bet)
+        adv_n_bet = adv_n.clone().detach()
         actions = ptu.from_numpy(actions)
 
         ob_tensor = torch.Tensor(observations)
-        ac_distribution = self.forward(ob_tensor)
-        log_pi = ac_distribution.log_prob(actions)
-        loss = -torch.mean(log_pi*(adv_n-0.01))
-        self.optimizer.zero_grad()
-        loss.backward()
-        self.optimizer.step()
-        return loss.item()
+        ac_distribution = self.forward(ob_tensor, discrete=True)
+        log_pi_act = ac_distribution.log_prob(actions[:,0])
+        loss_act = -torch.mean(log_pi_act*(adv_n-0.01))
+        self.action_optimizer.zero_grad()
+        loss_act.backward()
+        self.action_optimizer.step()
+
+        act_taken = torch.zeros_like(observations_bet[:,0:4])
+        rows = np.arange(0, 1000)
+        act_taken[rows,(actions[:,0]).to(int)] = 1
+        observations_bet[:,0:4] = act_taken
+
+        ob_tensor = torch.Tensor(observations_bet)
+        bet_distribution = self.forward(ob_tensor, discrete=False)
+        log_pi_bet = bet_distribution.log_prob(actions[:,1].unsqueeze(1))
+        loss_bet = -torch.mean(log_pi_bet*(adv_n_bet-0.01))
+        self.bet_optimizer.zero_grad()
+        loss_bet.backward()
+        self.bet_optimizer.step()
+
+        return loss_bet.item() + loss_act.item()
