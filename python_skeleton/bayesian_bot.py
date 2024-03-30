@@ -164,7 +164,7 @@ class Player(Bot):
         elif sum_better_hands < 0.4:
             return RaiseAction(observation["min_raise"])
         elif sum_better_hands < 0.3:
-            amt = random.randint(observation["min_raise"], observation["max_raise"])
+            amt = max(observation["min_raise"], observation["max_raise"]//2)
             return RaiseAction(amt)
         elif sum_better_hands < 0.05:
             return RaiseAction(observation["max_raise"])
