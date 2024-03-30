@@ -154,46 +154,31 @@ class Player(Bot):
         #sum up all the probabilities of the opponent having a hand better than yours
  
         #my_equity = self.pre_computed_probs['_'.join(sorted(observation["my_cards"])) + '_' + '_'.join(sorted(observation["board_cards"]))]
-
-        # Estimate opponent hand probabilities
-        street = observation["street"]
-        if street < 2:
-            opponent_equity = self.estimate_opponent_equity(observation["my_cards"], observation["board_cards"], False)
-            # Sum up probabilities of opponent having a better hand
-            sum_better_hands = sum([self.hand_rank(observation, hand) for hand, prob in opponent_equity.items()])/17550
-            # Make decision based on the sum of probabilities
-            if sum_better_hands > 0.5:
-                return FoldAction()
-            #sum_better_hands in between 0.4 and 0.5
-            elif sum_better_hands > 0.4 and sum_better_hands <= 0.5:
+        first_card = observation["my_cards"][0][0]
+        second_card = observation["my_cards"][1][0]
+        if first_card == second_card:
+            if RaiseAction in observation["legal_actions"]:
                 return RaiseAction(observation["min_raise"])
-            elif sum_better_hands > 0.3 and sum_better_hands <= 0.4:
-                amt = random.randint(observation["min_raise"], observation["max_raise"])
-                return RaiseAction(amt)
-            elif sum_better_hands <= 0.05:
-                return RaiseAction(observation["max_raise"])
-            
+            elif CallAction in observation["legal_actions"]:
+                return CallAction()
+            else:
+                return CheckAction()
+
+        if observation["my_cards"][0][1] == observation["my_cards"][1][1]:
+            if RaiseAction in observation["legal_actions"]:
+                return RaiseAction(observation["min_raise"])
+            elif CallAction in observation["legal_actions"]:
+                return CallAction()
+            else:
+                return CheckAction()
+
+        if abs(int(first_card) - int(second_card)) <= 3:
             if CallAction in observation["legal_actions"]:
                 return CallAction()
             else:
                 return CheckAction()
-        else:
-            my_hand = generate_and_categorize_hands(observation["my_cards"], observation["board_cards"])
-            opp_hands = self.estimate_opponent_equity(observation["my_cards"], observation["board_cards"], True)
-            results = [generate_and_categorize_hands(hand, observation["board_cards"]) for hand in opp_hands]
-            win_prob = sum([my_hand < hand for hand in results])/len(results)
-            if win_prob > 0.8:
-                return RaiseAction(observation["max_raise"])
-            elif win_prob > 0.5 and win_prob <= 0.8:
-                amt = random.randint(observation["min_raise"], observation["max_raise"])
-                return RaiseAction(amt)
-            elif win_prob > 0.2 and win_prob <= 0.5:
-                return RaiseAction(observation["min_raise"])
-            else:
-                if CheckAction in observation["legal_actions"]:
-                    return CheckAction()
-                else:
-                    return FoldAction()
+
+        return FoldAction()
 
 
 
