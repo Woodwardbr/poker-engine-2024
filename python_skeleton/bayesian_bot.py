@@ -243,25 +243,21 @@ class Player(Bot):
         self.log.append(f"Opponent equity: {opp_equity}")
         print("VA Linux")
         #otherwise, compare equities and proceed.
-        if my_equity >= opp_equity:
-            equity_diff = ((my_equity - opp_equity)/opp_equity) * 100
-            if equity_diff > 20:
-                if RaiseAction in observation["legal_actions"]:
-                    stack_bet = int(0.5 * (observation["my_stack"] + observation["opp_stack"]))
-                    amt = max(observation["min_raise"], stack_bet)
-                    return RaiseAction(amt)
-                else:
-                    return CallAction()
-            
-            if CallAction in observation["legal_actions"]:
+        equity_diff = ((my_equity - opp_equity)/opp_equity)
+        if equity_diff > 0.2:
+            if RaiseAction in observation["legal_actions"]:
+                stack_bet = int(equity_diff * (observation["my_stack"]))
+                amt = max(observation["min_raise"], stack_bet)
+                return RaiseAction(amt)
+            else:
                 return CallAction()
-            else:
-                return CheckAction()
+        
+        if CallAction in observation["legal_actions"]:
+            return CallAction()
+        elif CheckAction in observation["legal_actions"]:
+            return CheckAction()
         else:
-            if CheckAction in observation["legal_actions"]:
-                return CheckAction()
-            else:
-                return FoldAction()
+            return FoldAction()
 
 if __name__ == '__main__':
     run_bot(Player(), parse_args())
