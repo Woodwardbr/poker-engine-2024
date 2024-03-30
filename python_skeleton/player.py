@@ -107,13 +107,33 @@ class Player(Bot):
         self.log.append("My contribution: " + str(my_contribution))
         self.log.append("My bankroll: " + str(observation["my_bankroll"]))
 
-        if RaiseAction in observation["legal_actions"] and random.random() < 0.99:
-            min_cost = observation["min_raise"] - observation["my_pip"] # the cost of a minimum bet/raise
-            max_cost = observation["max_raise"] - observation["my_pip"] # the cost of a maximum bet/raise
-            return RaiseAction(observation["max_raise"])
-        if CheckAction in observation["legal_actions"]:
-            return CheckAction()
-        return CallAction()
+        ###replace this code: this is just a rule based agent that plays any pair, same suited hand, or hands with straight potential
+
+        first_card = observation["my_cards"][0][0]
+        second_card = observation["my_cards"][1][0]
+        if first_card == second_card:
+            if RaiseAction in observation["legal_actions"]:
+                return RaiseAction(observation["min_raise"])
+            elif CallAction in observation["legal_actions"]:
+                return CallAction()
+            else:
+                return CheckAction()
+
+        if observation["my_cards"][0][1] == observation["my_cards"][1][1]:
+            if RaiseAction in observation["legal_actions"]:
+                return RaiseAction(observation["min_raise"])
+            elif CallAction in observation["legal_actions"]:
+                return CallAction()
+            else:
+                return CheckAction()
+        
+        if abs(int(first_card) - int(second_card)) <= 3:
+            if CallAction in observation["legal_actions"]:
+                return CallAction()
+            else:
+                return CheckAction()
+        
+        return FoldAction()
 
 if __name__ == '__main__':
     run_bot(Player(), parse_args())
