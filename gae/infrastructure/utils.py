@@ -75,9 +75,10 @@ def sample_trajectory(env, policy, max_path_length, render=False, render_mode=('
                     obs_arr.extend(o.tolist())
             obs_arr = np.array(obs_arr)
             obses.append(obs_arr)
-            act = policy.get_action(obs_arr)
-            act = act[0]
-            acts.append(act)
+            act = policy.get_action(obs_arr)[0]
+
+
+            acts.append(np.array([act_choice, raise_amt]))
             nobs, rew, done, _, mode = env.step(act)
             nobses.append(nobs)
             rews.append(rew)

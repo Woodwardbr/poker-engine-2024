@@ -93,7 +93,10 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
         observation = ptu.from_numpy(observation)
         action_distribution = self.forward(observation)
         action = action_distribution.sample()
-        return ptu.to_numpy(action)
+        action = ptu.to_numpy(action)
+        act_choice = np.argmax(action[:-1])
+        raise_amt = action[-1]
+        return np.array([act_choice, raise_amt])
 
     # update/train this policy
     def update(self, observations, actions, **kwargs):
