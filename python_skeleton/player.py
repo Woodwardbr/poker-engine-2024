@@ -31,7 +31,7 @@ class Player(Bot):
         Nothing.
         """
         self.log = []
-        self.pre_computed_probs = pickle.load(open("/Users/vinaymaruri/poker-engine-2024/python_skeleton/skeleton/pre_computed_probs.pkl", "rb"))
+        #self.pre_computed_probs = pickle.load(open("python_skeleton/skeleton/pre_computed_probs.pkl", "rb"))
         pass
 
     def handle_new_round(self, game_state: GameState, round_state: RoundState, active: int) -> None:
@@ -77,12 +77,6 @@ class Player(Bot):
         self.log.append("================================\n")
 
         return self.log
-
-    #this code just returns if their hand has more equity than mine
-    def hand_rank(self, observation, opp_hand):
-        my_equity = self.pre_computed_probs['_'.join(sorted(observation["my_cards"])) + '_' + '_'.join(sorted(observation["board_cards"]))]
-        opp_equity = self.pre_computed_probs['_'.join(sorted(opp_hand)) + '_' + '_'.join(sorted(observation["board_cards"]))]
-        return opp_equity - my_equity
 
     def generate_prior(self, observation):
         """
