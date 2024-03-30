@@ -31,7 +31,7 @@ class Player(Bot):
         Nothing.
         """
         self.log = []
-        self.pre_computed_probs = pickle.load(open("python_skeleton/skeleton/pre_computed_probs.pkl", "rb"))
+        self.pre_computed_probs = pickle.load(open("/Users/vinaymaruri/poker-engine-2024/python_skeleton/skeleton/pre_computed_probs.pkl", "rb"))
         pass
 
     def handle_new_round(self, game_state: GameState, round_state: RoundState, active: int) -> None:
@@ -84,7 +84,7 @@ class Player(Bot):
         opp_equity = self.pre_computed_probs['_'.join(sorted(opp_hand)) + '_' + '_'.join(sorted(observation["board_cards"]))]
         return opp_equity - my_equity
 
-    def generate_prior(self, observation: dict):
+    def generate_prior(self, observation):
         """
         Generate a prior from the pre_computed_probs pickle file.
 
@@ -99,11 +99,10 @@ class Player(Bot):
         prior = {}
         for hand in itertools.combinations(my_cards + board_cards, 2):
             hand_str = "_".join(sorted(hand))
-            if hand_str in self.pre_computed_probs:
-                prior[hand_str] = evaluate(my_cards, board_cards)
+            prior[hand_str] = evaluate(my_cards, board_cards)
         return prior
     
-    def mcmc_simulation(prior, num_samples):
+    def mcmc_simulation(self, prior, num_samples):
         """
         Perform MCMC simulation to generate a posterior distribution of equity in a hand.
 
@@ -115,7 +114,8 @@ class Player(Bot):
             posterior (dict): The posterior probability distribution.
         """
         posterior = {}
-        samples = np.random.choice(list(prior.keys()), size=num_samples, p=list(prior.values()))
+        ps = list(prior.values())/np.sum(list(prior.values()))
+        samples = np.random.choice(list(prior.keys()), size=num_samples, p=ps)
         for hand in samples:
             if hand in posterior:
                 posterior[hand] += prior[hand]
@@ -168,7 +168,6 @@ class Player(Bot):
 
         ###replace this code: this is just a rule based agent that plays any pair, same suited hand, or hands with straight potential
 
-
         #this gives us a prior distribution of our equity at each street
         prior_us = self.generate_prior(observation)
         #this gives us a prior distribution of the opponent's equity at each street
@@ -188,7 +187,7 @@ class Player(Bot):
         opp_equity = random.choice(list(posterior_enemy.values()))
 
         #introduce irrationality in our agent
-        epsilon = random.randrange(0, 1, 0.1)
+        epsilon = np.random.uniform(0, 1)
         if epsilon < 0.05:
             if RaiseAction in observation["legal_actions"]:
                 amt = observation["max_raise"]
