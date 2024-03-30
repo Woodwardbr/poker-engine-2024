@@ -63,7 +63,7 @@ def dict_obs_to_np_obs(dict_obs):
             obs_arr.append(o)
         elif isinstance(o, np.ndarray):
             obs_arr.extend(o.tolist())
-    return np.array(obs_arr[1:]), dict_obs['is_my_turn']==1
+    return np.array(obs_arr[1:-3]), dict_obs['is_my_turn']==1
 
 def sample_trajectory(env, policy, max_path_length, render=False, render_mode=('rgb_array')):
     # TODO: get this from hw1

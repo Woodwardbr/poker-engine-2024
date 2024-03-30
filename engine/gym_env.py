@@ -12,7 +12,6 @@ from .actions import (
     FoldAction,
     RaiseAction,
     TerminalState,
-    IlegalAction
 )
 from .config import (
     BIG_BLIND,
@@ -145,21 +144,12 @@ class PokerEnv(gym.Env):
         else:
             action = [FoldAction(), CallAction(), CheckAction()][action_type]
         action = self._validate_action(action, self.curr_round_state, active)
-        illegal_action_taken = False
-        if isinstance(action, IlegalAction):
-            illegal_action_taken = True
-            action = FoldAction()
         self.player_last_actions[active] = action
         self.curr_round_state = self.curr_round_state.proceed(action)
 
         # If the round is over, return the final observation and reward    
         if isinstance(self.curr_round_state, TerminalState):
-            output = list(self._end_round(self.curr_round_state))
-            if illegal_action_taken:
-                rew = list(output[1])
-                rew[active] = -100
-                output[1] = tuple(rew)
-            return tuple(output)
+            return self._end_round(self.curr_round_state)
         
         return (self._get_observation(0), self._get_observation(1)), (0,0), False, False, {"mode": self.game_mode}
 
@@ -232,20 +222,15 @@ class PokerEnv(gym.Env):
             amount = int(action.amount)
             min_raise, max_raise = round_state.raise_bounds()
             if RaiseAction in legal_actions and min_raise <= amount <= max_raise:
-                # print(
-                #      f"Player {player_name} attempted legal RaiseAction with amount {amount}"
-                #  )
                 return action
             else:
                 print(
                     f"Player {player_name} attempted illegal RaiseAction with amount {amount}"
                 )
         elif type(action) in legal_actions:
-            # print(f"Player {player_name} attempted legal {type(action).__name__}")
-
             return action
         else:
             print(f"Player {player_name} attempted illegal {type(action).__name__}")
+            
 
-
-        return IlegalAction()
+        return CheckAction() if CheckAction in legal_actions else FoldAction()

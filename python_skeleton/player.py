@@ -15,6 +15,11 @@ from skeleton.states import NUM_ROUNDS, STARTING_STACK, BIG_BLIND, SMALL_BLIND
 from skeleton.bot import Bot
 from skeleton.runner import parse_args, run_bot
 
+def card_to_int(card: str):
+    rank, suit = card[0], card[1]
+    suit = {"s": 0, "h": 1, "d": 2}[suit]
+    return (suit * 10 + int(rank))
+
 class Player(Bot):
     """
     A pokerbot.
@@ -32,7 +37,7 @@ class Player(Bot):
         """
         self.policy = MLPPolicyAC(
             ac_dim=2,
-            ob_dim=19,
+            ob_dim=16,
             n_layers=2,
             size=64,
             learning_rate=5e-3,
@@ -90,12 +95,25 @@ class Player(Bot):
 
     def dict_obs_to_np_obs(self, dict_obs):
         obs_arr = []
-        for o in dict_obs.values():
-            if isinstance(o, int):
-                obs_arr.append(o)
-            elif isinstance(o, np.ndarray):
-                obs_arr.extend(o.tolist())
-        return np.array(obs_arr[1:]), dict_obs['is_my_turn']==1
+        legal_act_arr = [0,0,0,0]
+        obs_arr.extend(np.array([int(action in dict_obs["legal_actions"]) for action in [FoldAction, CallAction, CheckAction, RaiseAction]]).astype(np.int8))
+        obs_arr.append(dict_obs['street'])
+        for i in range(len(dict_obs["my_cards"])):
+            obs_arr.append(card_to_int(dict_obs["my_cards"][i]))
+        
+        for i in range(len(dict_obs["board_cards"])):
+            obs_arr.append(card_to_int(dict_obs["board_cards"][i]))
+
+        for i in range(2-len(dict_obs["board_cards"])):
+            obs_arr.append(0)
+        obs_arr.append(dict_obs["my_pip"])
+        obs_arr.append(dict_obs["opp_pip"])
+        obs_arr.append(dict_obs["my_stack"])
+        obs_arr.append(dict_obs["opp_stack"])
+        obs_arr.append(dict_obs["my_bankroll"])
+        obs_arr.append(dict_obs["min_raise"])
+        obs_arr.append(dict_obs["max_raise"])
+        return np.array(obs_arr)
 
     def get_action(self, observation: dict) -> Action:
         """
@@ -131,20 +149,22 @@ class Player(Bot):
         self.log.append("My contribution: " + str(my_contribution))
         self.log.append("My bankroll: " + str(observation["my_bankroll"]))
 
-        obs_arr, my_turn = self.dict_obs_to_np_obs(observation)
-        policy_action = self.policy.get_action(obs_arr)
-        action_type = None
+        obs_arr = self.dict_obs_to_np_obs(observation)
+        self.log.append("Obs Arr:" + str(obs_arr))
+
+        policy_action = self.policy.get_action(obs_arr).astype(int)
+
         match policy_action[0]:
             case 0:
-                action_type = FoldAction()
+                return FoldAction()
             case 1:
-                action_type = CallAction()
+                return CallAction()
             case 2:
-                action_type = CheckAction()
+                return CheckAction()
             case 3:
-                action_type = RaiseAction(policy_action[1])
-                
-        return action_type
+                return RaiseAction(policy_action[1])
+
+        return FoldAction()
 
 
 if __name__ == '__main__':
