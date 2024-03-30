@@ -6,12 +6,14 @@ import random
 import pickle
 import itertools
 from typing import Optional
+import numpy as np
 
 from skeleton.actions import Action, CallAction, CheckAction, FoldAction, RaiseAction
 from skeleton.states import GameState, TerminalState, RoundState
 from skeleton.states import NUM_ROUNDS, STARTING_STACK, BIG_BLIND, SMALL_BLIND
 from skeleton.bot import Bot
 from skeleton.runner import parse_args, run_bot
+from skeleton.evaluate import evaluate
 
 class Player(Bot):
     """
@@ -82,7 +84,46 @@ class Player(Bot):
         opp_equity = self.pre_computed_probs['_'.join(sorted(opp_hand)) + '_' + '_'.join(sorted(observation["board_cards"]))]
         return opp_equity - my_equity
 
+    def generate_prior(self, observation: dict):
+        """
+        Generate a prior from the pre_computed_probs pickle file.
 
+        Args:
+            observation (dict): The observation of the current state.
+
+        Returns:
+            prior (dict): the prior probability distribution.
+        """
+        my_cards = observation["my_cards"]
+        board_cards = observation["board_cards"]
+        prior = {}
+        for hand in itertools.combinations(my_cards + board_cards, 2):
+            hand_str = "_".join(sorted(hand))
+            if hand_str in self.pre_computed_probs:
+                prior[hand_str] = evaluate(my_cards, board_cards)
+        return prior
+    
+    def mcmc_simulation(prior, num_samples):
+        """
+        Perform MCMC simulation to generate a posterior distribution of equity in a hand.
+
+        Args:
+            prior (dict): The prior probability distribution.
+            num_samples (int): The number of MCMC samples to generate.
+
+        Returns:
+            posterior (dict): The posterior probability distribution.
+        """
+        posterior = {}
+        samples = np.random.choice(list(prior.keys()), size=num_samples, p=list(prior.values()))
+        for hand in samples:
+            if hand in posterior:
+                posterior[hand] += prior[hand]
+            else:
+                posterior[hand] = 1
+        for hand in posterior:
+            posterior[hand] /= num_samples
+        return posterior
 
     def get_action(self, observation: dict) -> Action:
         """
@@ -127,9 +168,36 @@ class Player(Bot):
 
         ###replace this code: this is just a rule based agent that plays any pair, same suited hand, or hands with straight potential
 
-        first_card = observation["my_cards"][0][0]
-        second_card = observation["my_cards"][1][0]
-        if first_card == second_card:
+
+        #this gives us a prior distribution of our equity at each street
+        prior_us = self.generate_prior(observation)
+        #this gives us a prior distribution of the opponent's equity at each street
+        prior_enemy = {hand: 1 - prob for hand, prob in prior_us.items()}
+
+
+        num_samples = 10000
+
+        #this gives us a simulated posterior distribution of our equity
+        posterior_us = self.mcmc_simulation(prior_us, num_samples)
+
+        #this gives us a simulated posterior distribution of the opponent's equity
+        posterior_enemy = self.mcmc_simulation(prior_enemy, num_samples)
+
+        #pull random value from posteriors
+        my_equity = random.choice(list(posterior_us.values()))
+        opp_equity = random.choice(list(posterior_enemy.values()))
+
+        #introduce irrationality in our agent
+        epsilon = random.randrange(0, 1, 0.1)
+        if epsilon < 0.05:
+            if RaiseAction in observation["legal_actions"]:
+                amt = observation["max_raise"]
+                return RaiseAction(amt)
+            else:
+                return FoldAction()
+            
+        #otherwise, compare equities and proceed.
+        if my_equity >= opp_equity:
             if RaiseAction in observation["legal_actions"]:
                 amt = random.randint(observation["min_raise"], observation["max_raise"])
                 return RaiseAction(amt)
@@ -137,24 +205,11 @@ class Player(Bot):
                 return CallAction()
             else:
                 return CheckAction()
-
-        if observation["my_cards"][0][1] == observation["my_cards"][1][1]:
-            if RaiseAction in observation["legal_actions"]:
-                amt = random.randint(observation["min_raise"], observation["max_raise"])
-                return RaiseAction(amt)
-            elif CallAction in observation["legal_actions"]:
-                return CallAction()
-            else:
+        else:
+            if CheckAction in observation["legal_actions"]:
                 return CheckAction()
-
-        if abs(int(first_card) - int(second_card)) <= 3:
-            if CallAction in observation["legal_actions"]:
-                return CallAction()
             else:
-                return CheckAction()
-
-        return FoldAction()
-
+                return FoldAction()
 
 if __name__ == '__main__':
     run_bot(Player(), parse_args())
