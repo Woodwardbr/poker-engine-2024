@@ -161,18 +161,19 @@ class Player(Bot):
         # Make decision based on the sum of probabilities
         if sum_better_hands > 0.5:
             return FoldAction()
-        elif sum_better_hands < 0.4:
+        #sum_better_hands in between 0.4 and 0.5
+        elif sum_better_hands > 0.4 and sum_better_hands <= 0.5:
             return RaiseAction(observation["min_raise"])
-        elif sum_better_hands < 0.3:
+        elif sum_better_hands > 0.3 and sum_better_hands <= 0.4:
             amt = random.randint(observation["min_raise"], observation["max_raise"])
             return RaiseAction(amt)
-        elif sum_better_hands < 0.05:
+        elif sum_better_hands <= 0.05:
             return RaiseAction(observation["max_raise"])
         
-        if CheckAction in observation["legal_actions"]:
-            return CheckAction()
-        else:
+        if CallAction in observation["legal_actions"]:
             return CallAction()
+        else:
+            return CheckAction()
 
 
 if __name__ == '__main__':
