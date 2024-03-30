@@ -108,7 +108,7 @@ class Player(Bot):
                 obs_arr.append(dict_obs["my_cards"][i])
         
         for i in range(len(dict_obs["board_cards"])):
-            if isinstance(dict_obs["board_cards"][i], int):
+            if isinstance(dict_obs["board_cards"][i], str):
                 obs_arr.append(card_to_int(dict_obs["board_cards"][i]))
             else:
                 obs_arr.append(dict_obs["board_cards"][i])
