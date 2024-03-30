@@ -43,15 +43,27 @@ def build_mlp(
         activation = _str_to_activation[activation]
     if isinstance(output_activation, str):
         output_activation = _str_to_activation[output_activation]
+
     layers = []
     in_size = input_size
+
     for _ in range(n_layers):
         layers.append(nn.Linear(in_size, size))
         layers.append(activation)
         in_size = size
+
     layers.append(nn.Linear(in_size, output_size))
     layers.append(output_activation)
-    return nn.Sequential(*layers)
+
+    output = nn.Sequential(*layers)
+
+    classes = output[:5]
+    classes = nn.functional.sigmoid(classes)
+
+    regressor = output[5]
+    regressor = nn.functional.relu(regressor)
+    
+    return classes, regressor
 
 
 device = None
