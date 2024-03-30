@@ -1,4 +1,4 @@
-from gae.infrastructure.utils import *
+from python_skeleton.gae.infrastructure.utils import *
 
 
 class ReplayBuffer(object):

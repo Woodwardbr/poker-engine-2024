@@ -9,11 +9,11 @@ import gymnasium as gym
 from gymnasium import wrappers
 import numpy as np
 import torch
-from gae.infrastructure import pytorch_util as ptu
+from python_skeleton.gae.infrastructure import pytorch_util as ptu
 
-from gae.infrastructure import utils
+from python_skeleton.gae.infrastructure import utils
 
-from gae.infrastructure.monitor import Monitor
+from python_skeleton.gae.infrastructure.monitor import Monitor
 
 # how many rollouts to save as videos to tensorboard
 MAX_NVIDEO = 2

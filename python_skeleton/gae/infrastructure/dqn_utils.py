@@ -9,7 +9,7 @@ from torch import nn
 import tensorflow as tf
 import torch.optim as optim
 
-from gae.infrastructure.atari_wrappers import wrap_deepmind
+from python_skeleton.gae.infrastructure.atari_wrappers import wrap_deepmind
 
 import torch
 

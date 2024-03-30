@@ -158,7 +158,15 @@ class PokerEnv(gym.Env):
         assert self.curr_round_state.button % 2 == 0
         (obs1, obs2), (reward1, _), done, trunc, info = self._step_without_opp(action)
         while obs2["is_my_turn"]:
-            action2 = self.opp_bot.get_action_pair(obs2)      
+            action2 = self.opp_bot.get_action_pair(obs2)
+            if isinstance(action2, FoldAction):
+                action2 = [0, 0]
+            elif isinstance(action2, CheckAction):
+                action2 = [1, 0]
+            elif isinstance(action2, CallAction):
+                action2 = [2, 0]
+            elif isinstance(action2, RaiseAction):
+                action2 = [3, action2[1]]
             (obs1, obs2), (reward1, _), done, trunc, info = self._step_without_opp(action2)  
         return obs1, reward1, done, trunc, info
 

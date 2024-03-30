@@ -1,8 +1,8 @@
 import os
 import time
 
-from gae.agents.ac_agent import ACAgent
-from gae.infrastructure.rl_trainer import RL_Trainer
+from python_skeleton.gae.agents.ac_agent import ACAgent
+from python_skeleton.gae.infrastructure.rl_trainer import RL_Trainer
 
 
 class AC_Trainer(object):

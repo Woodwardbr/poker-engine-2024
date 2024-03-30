@@ -1,12 +1,12 @@
 from collections import OrderedDict
 
-from gae.critics.bootstrapped_continuous_critic import \
+from python_skeleton.gae.critics.bootstrapped_continuous_critic import \
     BootstrappedContinuousCritic
-from gae.infrastructure.replay_buffer import ReplayBuffer
-from gae.infrastructure.utils import *
-from gae.policies.MLP_policy import MLPPolicyAC
+from python_skeleton.gae.infrastructure.replay_buffer import ReplayBuffer
+from python_skeleton.gae.infrastructure.utils import *
+from python_skeleton.gae.policies.MLP_policy import MLPPolicyAC
 from .base_agent import BaseAgent
-import gae.infrastructure.pytorch_util as ptu
+import python_skeleton.gae.infrastructure.pytorch_util as ptu
 import torch
 
 

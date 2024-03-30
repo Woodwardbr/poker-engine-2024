@@ -5,8 +5,8 @@ Simple example pokerbot, written in Python.
 import random
 import torch
 import numpy as np
-from gae.policies.MLP_policy import MLPPolicyAC
-from gae.infrastructure.pytorch_util import build_mlp
+from python_skeleton.gae.policies.MLP_policy import MLPPolicyAC
+from python_skeleton.gae.infrastructure.pytorch_util import build_mlp
 import pickle
 import itertools
 from typing import Optional
