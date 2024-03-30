@@ -158,7 +158,8 @@ class Player(Bot):
         second_card = observation["my_cards"][1][0]
         if first_card == second_card:
             if RaiseAction in observation["legal_actions"]:
-                return RaiseAction(observation["min_raise"])
+                amt = random.randint(observation["min_raise"], observation["max_raise"])
+                return RaiseAction(amt)
             elif CallAction in observation["legal_actions"]:
                 return CallAction()
             else:
@@ -166,7 +167,8 @@ class Player(Bot):
 
         if observation["my_cards"][0][1] == observation["my_cards"][1][1]:
             if RaiseAction in observation["legal_actions"]:
-                return RaiseAction(observation["min_raise"])
+                amt = random.randint(observation["min_raise"], observation["max_raise"])
+                return RaiseAction(amt)
             elif CallAction in observation["legal_actions"]:
                 return CallAction()
             else:
