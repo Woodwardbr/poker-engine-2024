@@ -109,7 +109,7 @@ class Player(Bot):
     def hand_rank(self, observation, opp_hand):
         my_equity = self.pre_computed_probs['_'.join(sorted(observation["my_cards"])) + '_' + '_'.join(sorted(observation["board_cards"]))]
         opp_equity = self.pre_computed_probs['_'.join(sorted(opp_hand)) + '_' + '_'.join(sorted(observation["board_cards"]))]
-        return opp_equity - my_equity
+        return opp_equity > my_equity
 
 
 
