@@ -186,7 +186,32 @@ class Player(Bot):
         #my_equity = self.pre_computed_probs['_'.join(sorted(observation["my_cards"])) + '_' + '_'.join(sorted(observation["board_cards"]))]
 
         ###replace this code: this is just a rule based agent that plays any pair, same suited hand, or hands with straight potential
-
+        if observation["street"] == 0:
+            first_card = observation["my_cards"][0][0]
+            second_card = observation["my_cards"][1][0]
+            if first_card == second_card:
+                if RaiseAction in observation["legal_actions"]:
+                    amt = random.randint(observation["min_raise"], observation["max_raise"])
+                    return RaiseAction(amt)
+                elif CallAction in observation["legal_actions"]:
+                    return CallAction()
+                else:
+                    return CheckAction()
+            if observation["my_cards"][0][1] == observation["my_cards"][1][1]:
+                if RaiseAction in observation["legal_actions"]:
+                    amt = random.randint(observation["min_raise"], observation["max_raise"])
+                    return RaiseAction(amt)
+                elif CallAction in observation["legal_actions"]:
+                    return CallAction()
+                else:
+                    return CheckAction()
+            if abs(int(first_card) - int(second_card)) <= 3:
+                if CallAction in observation["legal_actions"]:
+                    return CallAction()
+                else:
+                    return CheckAction()
+            if FoldAction in observation["legal_actions"]:
+                return FoldAction()
         #this gives us a prior distribution of our equity at each street
         prior_us = self.generate_prior_ours(observation)
         #this gives us a prior distribution of the opponent's equity at each street
