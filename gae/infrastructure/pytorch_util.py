@@ -57,15 +57,68 @@ def build_mlp(
 
     output = nn.Sequential(*layers)
 
-    classes = output[:5]
+    classes = output[:4]
     classes = nn.functional.sigmoid(classes)
 
-    regressor = output[5]
+    regressor = output[4]
     regressor = nn.functional.relu(regressor)
     
     return classes, regressor
 
+    
+class task_MLP(nn.Module):
+    def __init__(self, input_size, size, output_size, n_layers, activation, output_activation):
+        super().__init__()
 
+        self.n_layers = n_layers
+        self.size = size
+        self.activation = activation
+        self.output_activation = output_activation
+        
+        
+        self.linear1 = nn.Linear(input_size, size)
+        self.linear2 = nn.Linear(size, size)
+        self.linear3 = nn.Linear(size, output_size)
+        self.activation = nn.ReLU()
+
+
+    def forward(self, x):
+        x = self.linear1(x)
+        x = self.activation(x)
+        for _ in range(self.n_layers - 1):
+            x = self.linear2(x)
+            x = self.activation(x)
+
+        x = self.linear3(x)
+        x = nn.functional.sigmoid(x)
+        return x
+
+class regress_MLP(nn.Module):
+    def __init__(self, input_size, size, output_size, n_layers, activation, output_activation):
+        super().__init__()
+
+        self.n_layers = n_layers
+        self.size = size
+        self.activation = activation
+        self.output_activation = output_activation
+          
+        self.linear1 = nn.Linear(input_size, size)
+        self.linear2 = nn.Linear(size, size)
+        self.linear3 = nn.Linear(size, output_size)
+        self.activation = nn.ReLU()
+
+
+    def forward(self, x):
+        x = self.linear1(x)
+        x = self.activation(x)
+        for _ in range(self.n_layers - 1):
+            x = self.linear2(x)
+            x = self.activation(x)
+
+        x = self.linear3(x)
+        x = nn.functional.relu(x)
+        
+        return x
 device = None
 
 
