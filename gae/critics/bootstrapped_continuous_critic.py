@@ -33,7 +33,7 @@ class BootstrappedContinuousCritic(nn.Module, BaseCritic):
         self.num_target_updates = hparams['num_target_updates']
         self.num_grad_steps_per_target_update = hparams['num_grad_steps_per_target_update']
         self.gamma = hparams['gamma']
-        self.critic_network = ptu.build_mlp(
+        self.critic_network = ptu.build_critic_mlp(
             self.ob_dim,
             1,
             n_layers=self.n_layers,

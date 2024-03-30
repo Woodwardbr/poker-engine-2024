@@ -74,7 +74,7 @@ class RL_Trainer(object):
         
         # Two player has obs as a tuple
         ob_dim = 19
-        ac_dim = 5
+        ac_dim = 1
         self.params['agent_params']['ac_dim'] = ac_dim
         self.params['agent_params']['ob_dim'] = ob_dim
 

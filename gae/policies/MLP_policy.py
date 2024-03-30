@@ -37,30 +37,28 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
         self.training = training
         self.nn_baseline = nn_baseline
 
-        if self.discrete:
-            self.logits_na = ptu.build_mlp(input_size=self.ob_dim,
-                                           output_size=self.ac_dim,
-                                           n_layers=self.n_layers,
-                                           size=self.size)
-            self.logits_na.to(ptu.device)
-            self.mean_net = None
-            self.logstd = None
-            self.optimizer = optim.Adam(self.logits_na.parameters(),
-                                        self.learning_rate)
-        else:
-            self.logits_na = None
-            self.mean_net = ptu.build_mlp(input_size=self.ob_dim,
-                                      output_size=self.ac_dim,
-                                      n_layers=self.n_layers, size=self.size)
-            self.logstd = nn.Parameter(
-                torch.zeros(self.ac_dim, dtype=torch.float32, device=ptu.device)
-            )
-            self.mean_net.to(ptu.device)
-            self.logstd.to(ptu.device)
-            self.optimizer = optim.Adam(
-                itertools.chain([self.logstd], self.mean_net.parameters()),
-                self.learning_rate
-            )
+        # Action NN
+        self.action_mlp = ptu.build_critic_mlp(input_size=self.ob_dim,
+                                        output_size=4,
+                                        n_layers=self.n_layers,
+                                        size=self.size)
+        self.action_mlp.to(ptu.device)
+        self.action_optimizer = optim.Adam(self.action_mlp.parameters(),
+                                    self.learning_rate)
+
+        # Betting NN
+        self.bet_mlp = ptu.build_critic_mlp(input_size=self.ob_dim,
+                                    output_size=1,
+                                    n_layers=self.n_layers, size=self.size)
+        self.logstd = nn.Parameter(
+            torch.zeros(1, dtype=torch.float32, device=ptu.device)
+        )
+        self.bet_mlp.to(ptu.device)
+        self.logstd.to(ptu.device)
+        self.bet_optimizer = optim.Adam(
+            itertools.chain([self.logstd], self.bet_mlp.parameters()),
+            self.learning_rate
+        )
 
         if nn_baseline:
             self.baseline = ptu.build_mlp(
@@ -91,11 +89,21 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
             observation = obs[None]
 
         observation = ptu.from_numpy(observation)
-        action = self.forward(observation)
-        action = ptu.to_numpy(action)
-        act_choice = np.argmax(action[:-1])
-        raise_amt = action[-1]
-        return np.array([act_choice, raise_amt])
+        action_distribution = self.forward(observation, discrete=True)
+        action = action_distribution.sample()
+
+        action_taken = torch.zeros([4])
+        action_taken[action] = 1
+        observation[0,0:4] = action_taken.to(int)
+        bet_distribution = self.forward(observation, discrete=False)
+        bet = bet_distribution.sample()
+        return np.concatenate([ptu.to_numpy(action), ptu.to_numpy(bet.squeeze(1))], axis=0)
+        # observation = ptu.from_numpy(observation)
+        # action = self.forward(observation)
+        # action = ptu.to_numpy(action)
+        # act_choice = np.argmax(action[:-1])
+        # raise_amt = action[-1]
+        # return np.array([act_choice, raise_amt])
 
     # update/train this policy
     def update(self, observations, actions, **kwargs):
@@ -106,8 +114,25 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
     # through it. For example, you can return a torch.FloatTensor. You can also
     # return more flexible objects, such as a
     # `torch.distributions.Distribution` object. It's up to you!
-    def forward(self, observation: torch.FloatTensor):
-        return self.mean_net(observation)
+    def forward(self, observation: torch.FloatTensor, discrete=False):
+        # return self.mean_net(observation)
+        # logits = self.action_mlp(observation)
+        # action_distribution = distributions.Categorical(logits=logits)
+        # return action_distribution
+        if discrete:
+            logits = self.action_mlp(observation)
+            action_distribution = distributions.Categorical(logits=logits)
+            return action_distribution
+        else:
+            batch_mean = self.bet_mlp(observation)
+            scale_tril = torch.diag(torch.exp(self.logstd))
+            batch_dim = batch_mean.shape[0]
+            batch_scale_tril = scale_tril.repeat(batch_dim, 1, 1)
+            action_distribution = distributions.MultivariateNormal(
+                batch_mean,
+                scale_tril=batch_scale_tril,
+            )
+            return action_distribution
 
 #####################################################
 #####################################################

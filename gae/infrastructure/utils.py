@@ -92,6 +92,9 @@ def sample_trajectory(env, policy, max_path_length, render=False, render_mode=('
             else:
                 terms.append(0)
 
+        if done:
+            break
+
     return Path(obses, imgs, acts, rews, nobses, terms)
 
 def sample_trajectories(env, policy, min_timesteps_per_batch, max_path_length, render=False, render_mode=('rgb_array')):
